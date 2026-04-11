@@ -1,0 +1,253 @@
+// PRP 病人追蹤系統 — Prisma schema
+//
+// Design notes:
+// - SQLite for zero-ops single-clinic deployment.
+// - Snapshot fields on TreatmentRecord (unitPriceSnapshot, totalAmount,
+//   commissionRateSnapshot, commissionAmount) freeze history so that
+//   changing product prices or doctor commission rates never corrupts
+//   past revenue reports.
+// - Soft-delete on Patient only (`deletedAt`) to satisfy Taiwan's 7-year
+//   medical record retention (醫療法).
+// - FollowUpCall has `externalMessageId` + `channel` as forward-compat
+//   hooks for a future LINE bot integration.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Auth ----------
+
+enum Role {
+  DOCTOR
+  STAFF
+  ADMIN
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(STAFF)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Clinical relations
+  createdPatients Patient[]              @relation("PatientCreatedBy")
+  treatments      TreatmentRecord[]      @relation("TreatmentDoctor")
+  authoredCalls   FollowUpCall[]         @relation("CallAuthor")
+  commissionRates DoctorCommissionRate[]
+
+  // Auth.js adapter tables (kept for future OAuth; credentials provider uses JWT sessions)
+  accounts Account[]
+  sessions Session[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ---------- Domain enums ----------
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum BodyPart {
+  KNEE
+  SHOULDER
+  ELBOW
+  WRIST
+  HAND
+  HIP
+  ANKLE
+  FOOT
+  CERVICAL_SPINE
+  THORACIC_SPINE
+  LUMBAR_SPINE
+  SACROILIAC
+  OTHER
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  NO_SHOW
+  CANCELLED
+}
+
+// ---------- Domain tables ----------
+
+model Patient {
+  id          String  @id @default(cuid())
+  chartNumber String  @unique
+  name        String
+  gender      Gender
+  birthDate   DateTime
+  phone       String?
+  address     String?
+  notes       String?
+
+  deletedAt DateTime? // soft delete
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  createdById String
+  createdBy   User   @relation("PatientCreatedBy", fields: [createdById], references: [id])
+
+  treatments   TreatmentRecord[]
+  appointments FollowUpAppointment[]
+
+  @@index([name])
+  @@index([deletedAt])
+}
+
+model PRPProduct {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  unitPrice Int // TWD, no fractional cents
+  active    Boolean  @default(true)
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  treatments TreatmentRecord[]
+}
+
+model TreatmentRecord {
+  id             String   @id @default(cuid())
+  patientId      String
+  patient        Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctorId       String
+  doctor         User     @relation("TreatmentDoctor", fields: [doctorId], references: [id])
+
+  treatmentDate      DateTime
+  bodyPart           BodyPart
+  bodyPartDetail     String? // free-text escape hatch, e.g. "left medial meniscus"
+  symptoms           String
+  painBefore         Int // 0-10
+  painImmediateAfter Int? // measured same visit; may be null if not recorded
+  ultrasoundNote     String? // v1 is text-only, no file upload
+  physicianNote      String?
+
+  productId         String
+  product           PRPProduct @relation(fields: [productId], references: [id])
+  quantity          Int
+  unitPriceSnapshot Int // frozen on create
+  totalAmount       Int // quantity * unitPriceSnapshot, frozen on create
+
+  // Commission frozen on create so the monthly report is a pure aggregation.
+  commissionRateSnapshot Float
+  commissionAmount       Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  appointments FollowUpAppointment[]
+
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([treatmentDate])
+  @@index([bodyPart])
+}
+
+model FollowUpAppointment {
+  id                String           @id @default(cuid())
+  patientId         String
+  patient           Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  sourceTreatmentId String?
+  sourceTreatment   TreatmentRecord? @relation(fields: [sourceTreatmentId], references: [id], onDelete: SetNull)
+
+  scheduledAt DateTime
+  status      AppointmentStatus @default(SCHEDULED)
+  reason      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  followUpCall FollowUpCall?
+
+  @@index([scheduledAt])
+  @@index([patientId])
+  @@index([status])
+}
+
+model FollowUpCall {
+  id            String              @id @default(cuid())
+  appointmentId String              @unique
+  appointment   FollowUpAppointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  calledAt   DateTime @default(now())
+  calledById String
+  calledBy   User     @relation("CallAuthor", fields: [calledById], references: [id])
+
+  // Fields from the user story
+  symptomImprovement      String? // qualitative note
+  longTermPainImprovement Int? // optional 0-10 scale captured at follow-up
+  educationDone           Boolean @default(false)
+  appointmentConfirmed    Boolean @default(false)
+  patientFeedback         String?
+  notes                   String?
+
+  // Forward-compat for future LINE bot automation
+  externalMessageId String?
+  channel           String  @default("PHONE") // PHONE | LINE | ...
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DoctorCommissionRate {
+  id            String    @id @default(cuid())
+  doctorId      String
+  doctor        User      @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  rate          Float // 0.0 - 1.0
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  note          String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([doctorId, effectiveFrom])
+}

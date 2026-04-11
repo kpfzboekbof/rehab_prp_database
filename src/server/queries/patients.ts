@@ -33,10 +33,13 @@ export async function listPatients({
     deletedAt: null,
     ...(trimmedQ
       ? {
+          // Postgres `contains` is case-sensitive by default; `mode: insensitive`
+          // makes it ILIKE. Safe on Postgres only — if you ever switch providers
+          // revisit this file.
           OR: [
-            { name: { contains: trimmedQ } },
-            { chartNumber: { contains: trimmedQ } },
-            { phone: { contains: trimmedQ } },
+            { name: { contains: trimmedQ, mode: "insensitive" } },
+            { chartNumber: { contains: trimmedQ, mode: "insensitive" } },
+            { phone: { contains: trimmedQ, mode: "insensitive" } },
           ],
         }
       : {}),

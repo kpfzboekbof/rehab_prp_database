@@ -1,15 +1,45 @@
+# Self-hosted deployment (optional — Vercel is the primary target).
+#
+# Spins up the Next.js app + a local Postgres instance. The app runs
+# `prisma migrate deploy` on boot, so bringing the stack up on a fresh
+# host is just `docker compose up --build`.
+#
+# For cloud preview we use Neon instead (see README). This file is here
+# so the clinic can eventually host the whole thing on an internal server
+# without touching cloud resources.
+
 services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-prp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-prp_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-prp}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-prp} -d ${POSTGRES_DB:-prp}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   prp-dashboard:
     build: .
     ports:
       - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
-      - DATABASE_URL=file:/app/data/prp.db
-      - AUTH_SECRET=${AUTH_SECRET}
-      - AUTH_TRUST_HOST=true
-      - SEED_ADMIN_EMAIL=${SEED_ADMIN_EMAIL:-admin@clinic.local}
-      - SEED_ADMIN_PASSWORD=${SEED_ADMIN_PASSWORD:-changeme}
-      - SEED_ADMIN_NAME=${SEED_ADMIN_NAME:-管理員}
-    volumes:
-      - ./data:/app/data
+      DATABASE_URL: postgres://${POSTGRES_USER:-prp}:${POSTGRES_PASSWORD:-prp_dev_password}@postgres:5432/${POSTGRES_DB:-prp}
+      DIRECT_URL: postgres://${POSTGRES_USER:-prp}:${POSTGRES_PASSWORD:-prp_dev_password}@postgres:5432/${POSTGRES_DB:-prp}
+      AUTH_SECRET: ${AUTH_SECRET}
+      AUTH_TRUST_HOST: "true"
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@clinic.local}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-changeme}
+      SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-管理員}
     restart: unless-stopped
+
+volumes:
+  postgres_data:

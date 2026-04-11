@@ -16,8 +16,12 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // DIRECT_URL is used by Prisma Migrate / Introspect. With Neon's pgBouncer
+  // pooler in DATABASE_URL, migrations must go through a direct (non-pooled)
+  // connection — set DIRECT_URL to Neon's "Direct connection" string.
+  directUrl = env("DIRECT_URL")
 }
 
 // ---------- Auth ----------

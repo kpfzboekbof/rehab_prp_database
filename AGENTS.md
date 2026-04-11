@@ -19,3 +19,8 @@ Key renames / differences you are likely to trip on:
 - **TWD is integer.** No fractional cents in `unitPrice`, `totalAmount`, or `commissionAmount`. Use `formatTWD()` for display.
 - **CSV exports are de-identified by default.** Use `ageAt(birthDate)` instead of exporting `birthDate`; hide `name` and `chartNumber` unless the action explicitly documents a PII mode.
 - **Server action result convention.** On success, call `redirect()` (which throws `NEXT_REDIRECT` — the action never returns). On validation / business-logic failure, return `{ ok: false, error: string }`. Client forms consume this via `useActionState` and show inline errors. See `src/server/actions/patients.ts` for the canonical shape. `ActionState` type lives next to each action module. Follow this pattern for every new mutation (treatments, appointments, reminders, admin, …).
+- **Database is PostgreSQL.** The app targets Postgres (Neon for Vercel preview; self-hosted Postgres for production). Use Postgres-specific features where appropriate:
+  - `contains` searches must include `mode: "insensitive"` to be case-insensitive (Postgres default is case-sensitive, unlike SQLite).
+  - Enum columns are native Postgres enum types — adding a value needs a migration.
+  - Migrations live in `prisma/migrations/` and are applied via `prisma migrate deploy` (runtime) or `prisma migrate dev` (local schema iteration).
+  - `DATABASE_URL` must point at a pooled connection (Neon pgBouncer); `DIRECT_URL` must point at the direct connection and is used only by Prisma Migrate.

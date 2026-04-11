@@ -33,11 +33,8 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 
-# SQLite file lives under /app/data so it survives container rebuilds via volume.
-RUN mkdir -p /app/data
-VOLUME ["/app/data"]
-
 EXPOSE 3000
 
-# Apply migrations on boot, then start Next.js.
+# Apply migrations on boot, then start Next.js. DATABASE_URL / DIRECT_URL
+# must be provided by the environment (docker compose, Vercel, etc.).
 CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && node server.js"]

@@ -38,7 +38,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# database
+# legacy SQLite files (kept so old branches don't accidentally commit them)
 /data
 /prisma/data
 *.db

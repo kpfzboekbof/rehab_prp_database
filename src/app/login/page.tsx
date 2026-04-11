@@ -48,7 +48,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>登入</CardTitle>
-          <CardDescription>PRP 病人追蹤系統</CardDescription>
+          <CardDescription>龜山康澤PRP管理系統</CardDescription>
         </CardHeader>
         <CardContent>
           <form action={login} className="flex flex-col gap-4">

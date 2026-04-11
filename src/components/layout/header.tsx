@@ -31,7 +31,7 @@ export function Header({ userName, role, onToggleSidebar }: HeaderProps) {
           <span className="mt-1 block h-0.5 w-5 bg-current" />
           <span className="mt-1 block h-0.5 w-5 bg-current" />
         </button>
-        <span className="text-base font-semibold">PRP 病人追蹤系統</span>
+        <span className="text-base font-semibold">龜山康澤PRP管理系統</span>
       </div>
       <div className="flex items-center gap-3 text-sm">
         <span className="hidden text-neutral-600 sm:inline">

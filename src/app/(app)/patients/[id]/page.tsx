@@ -10,8 +10,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { DeletePatientButton } from "@/components/patients/delete-patient-button";
+import { TreatmentTable } from "@/components/treatments/treatment-table";
+import { formatTWD } from "@/lib/currency";
 import { ageAt, formatDateTW, formatDateTimeTW } from "@/lib/date";
 import { getPatient } from "@/server/queries/patients";
+import { listTreatmentsByPatient } from "@/server/queries/treatments";
 import { requireSession } from "@/server/rbac";
 
 interface PatientDetailPageProps {
@@ -33,7 +36,13 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
     notFound();
   }
 
+  const treatments = await listTreatmentsByPatient(patient.id);
+
   const canDelete = session.user.role === "DOCTOR" || session.user.role === "ADMIN";
+  const canAddTreatment =
+    session.user.role === "DOCTOR" || session.user.role === "ADMIN";
+
+  const totalRevenue = treatments.reduce((sum, t) => sum + t.totalAmount, 0);
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -113,11 +122,25 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
 
       <Card>
         <CardHeader>
-          <CardTitle>治療紀錄</CardTitle>
-          <CardDescription>PRP 施打、部位、疼痛分數、金額等</CardDescription>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle>治療紀錄</CardTitle>
+              <CardDescription>
+                共 {treatments.length} 筆
+                {treatments.length > 0 && ` · 累計金額 ${formatTWD(totalRevenue)}`}
+              </CardDescription>
+            </div>
+            {canAddTreatment && (
+              <Button asChild size="sm">
+                <Link href={`/patients/${patient.id}/treatments/new`}>
+                  新增治療紀錄
+                </Link>
+              </Button>
+            )}
+          </div>
         </CardHeader>
-        <CardContent className="text-sm text-neutral-500">
-          此功能尚未開放，即將推出。
+        <CardContent>
+          <TreatmentTable patientId={patient.id} rows={treatments} />
         </CardContent>
       </Card>
 

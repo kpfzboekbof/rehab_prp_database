@@ -24,3 +24,4 @@ Key renames / differences you are likely to trip on:
   - Enum columns are native Postgres enum types — adding a value needs a migration.
   - Migrations live in `prisma/migrations/` and are applied via `prisma migrate deploy` (runtime) or `prisma migrate dev` (local schema iteration).
   - `DATABASE_URL` must point at a pooled connection (Neon pgBouncer); `DIRECT_URL` must point at the direct connection and is used only by Prisma Migrate.
+- **Update the dashboard when you ship a feature.** `src/app/(app)/dashboard/page.tsx` has a `statForHref` switch that turns the "功能開發中" placeholder into a real one-line stat (count of patients, appointments, etc.). When you finish a feature page, add a case for its href so the dashboard card stops saying it's still under development. New features without a stat default back to the placeholder, so this is required, not optional.

@@ -33,6 +33,11 @@ export default async function TreatmentDetailPage({ params }: TreatmentDetailPag
     session.user.role === "ADMIN" ||
     (session.user.role === "DOCTOR" && treatment.doctorId === session.user.id);
 
+  // Nurses don't see commission figures (rate or amount) — those are
+  // payroll-sensitive and outside their job scope.
+  const canSeeCommission =
+    session.user.role === "ADMIN" || session.user.role === "DOCTOR";
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="text-sm text-neutral-500">
@@ -188,16 +193,22 @@ export default async function TreatmentDetailPage({ params }: TreatmentDetailPag
                 {treatment.totalAmount > 0 ? formatTWD(treatment.totalAmount) : "—"}
               </dd>
             </div>
-            <div>
-              <dt className="text-neutral-500">醫師抽成比例（snapshot）</dt>
-              <dd className="mt-1 font-medium">
-                {(treatment.commissionRateSnapshot * 100).toFixed(1)}%
-              </dd>
-            </div>
-            <div>
-              <dt className="text-neutral-500">醫師抽成金額</dt>
-              <dd className="mt-1 font-medium">{formatTWD(treatment.commissionAmount)}</dd>
-            </div>
+            {canSeeCommission && (
+              <>
+                <div>
+                  <dt className="text-neutral-500">醫師抽成比例（snapshot）</dt>
+                  <dd className="mt-1 font-medium">
+                    {(treatment.commissionRateSnapshot * 100).toFixed(1)}%
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-neutral-500">醫師抽成金額</dt>
+                  <dd className="mt-1 font-medium">
+                    {formatTWD(treatment.commissionAmount)}
+                  </dd>
+                </div>
+              </>
+            )}
           </dl>
         </CardContent>
       </Card>

@@ -1,24 +1,79 @@
 import Link from "next/link";
+import type { Role } from "@prisma/client";
 
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { navItemsForRole } from "@/components/layout/nav-items";
+  NAV_ITEMS,
+  type NavCategory,
+} from "@/components/layout/nav-items";
 import { db } from "@/lib/db";
+import { formatDateTW } from "@/lib/date";
 import { requireSession } from "@/server/rbac";
 
 /**
- * NOTE: when shipping a new feature page, replace its "功能開發中" entry
- * here with a real one-line stat (see the switch below) — see AGENTS.md.
+ * NOTE for future agents: when shipping a new feature page, add a case
+ * for its href to `statForHref` so the dashboard card stops showing the
+ * "—  開發中" placeholder. See AGENTS.md for the rule.
  */
+
+const ROLE_LABELS: Record<Role, string> = {
+  DOCTOR: "醫師",
+  STAFF: "護理師",
+  ADMIN: "管理者 / 醫師",
+};
+
+/**
+ * Color tokens picked from https://nipponcolors.com — calm, slightly
+ * muted, and visually distinct between sections. Stored as full Tailwind
+ * arbitrary-value strings because Tailwind v4 cannot interpolate these
+ * dynamically.
+ */
+const CATEGORY_STYLES: Record<
+  NavCategory,
+  {
+    label: string;
+    nameJa: string;
+    accent: string; // text colour
+    border: string; // left border on the cards
+    line: string; // section divider line
+  }
+> = {
+  clinical: {
+    label: "臨床作業",
+    nameJa: "asagi · 浅葱",
+    accent: "text-[#1D697C]",
+    border: "border-l-[#1D697C]",
+    line: "bg-[#1D697C]/30",
+  },
+  business: {
+    label: "業務管理",
+    nameJa: "kikyou · 桔梗",
+    accent: "text-[#6A5BA3]",
+    border: "border-l-[#6A5BA3]",
+    line: "bg-[#6A5BA3]/30",
+  },
+  admin: {
+    label: "系統設定",
+    nameJa: "yanagicha · 柳茶",
+    accent: "text-[#91AD70]",
+    border: "border-l-[#91AD70]",
+    line: "bg-[#91AD70]/30",
+  },
+};
+
+const SECTION_ORDER: NavCategory[] = ["clinical", "business", "admin"];
+
+type Stat =
+  | { kind: "number"; value: number; unit: string }
+  | { kind: "text"; text: string }
+  | { kind: "placeholder" };
+
 export default async function DashboardPage() {
   const session = await requireSession();
-  const items = navItemsForRole(session.user.role).filter(
-    (i) => i.href !== "/dashboard",
+  const role = session.user.role;
+
+  const items = NAV_ITEMS.filter(
+    (i) => i.href !== "/dashboard" && (!i.roles || i.roles.includes(role)),
   );
 
   const [
@@ -40,60 +95,133 @@ export default async function DashboardPage() {
     db.doctorCommissionRate.count({ where: { effectiveTo: null } }),
   ]);
 
-  function statForHref(href: string): string | null {
+  function statForHref(href: string): Stat {
     switch (href) {
       case "/patients":
-        return `目前共 ${patientCount} 位病人`;
+        return { kind: "number", value: patientCount, unit: "位病人" };
       case "/calendar":
         return upcomingAppointmentCount > 0
-          ? `未來預約 ${upcomingAppointmentCount} 筆`
-          : "尚無未來預約";
+          ? { kind: "number", value: upcomingAppointmentCount, unit: "筆未來預約" }
+          : { kind: "text", text: "尚無未來預約" };
       case "/admin/users":
-        return `共 ${activeUserCount} 位啟用使用者`;
+        return { kind: "number", value: activeUserCount, unit: "位啟用使用者" };
       case "/admin/products":
-        return `共 ${activeProductCount} 個啟用中品項`;
+        return { kind: "number", value: activeProductCount, unit: "個啟用品項" };
       case "/admin/commission":
-        return `${doctorsWithCommissionCount} 位醫師有現行抽成規則`;
+        return {
+          kind: "number",
+          value: doctorsWithCommissionCount,
+          unit: "位醫師有抽成規則",
+        };
       default:
-        return null; // not yet implemented
+        return { kind: "placeholder" };
     }
   }
 
+  const today = new Date();
+  const dateStr = formatDateTW(today);
+  const weekday = new Intl.DateTimeFormat("zh-TW", {
+    timeZone: "Asia/Taipei",
+    weekday: "long",
+  }).format(today);
+
+  const userName = session.user.name || session.user.email || "";
+
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">
-          歡迎，{session.user.name || session.user.email}
+    <div className="mx-auto max-w-5xl space-y-12">
+      {/* Greeting block */}
+      <header className="space-y-2">
+        <div className="text-xs uppercase tracking-[0.25em] text-neutral-400">
+          {dateStr} · {weekday}
+        </div>
+        <h1 className="text-3xl font-light tracking-wide text-neutral-900 sm:text-4xl">
+          歡迎回來，<span className="font-medium">{userName}</span>
         </h1>
-        <p className="mt-1 text-sm text-neutral-600">
-          龜山康澤PRP管理系統 — 選擇下方功能開始使用。
+        <p className="text-sm text-neutral-500">
+          龜山康澤 PRP 管理系統 · {ROLE_LABELS[role]}
         </p>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {items.map((item) => {
-          const stat = statForHref(item.href);
-          const isPlaceholder = stat === null;
-          return (
-            <Link key={item.href} href={item.href} className="group">
-              <Card className="h-full transition-colors group-hover:border-neutral-400">
-                <CardHeader>
-                  <CardTitle className="text-lg">{item.label}</CardTitle>
-                  <CardDescription>前往 {item.href}</CardDescription>
-                </CardHeader>
-                <CardContent
-                  className={
-                    isPlaceholder
-                      ? "text-xs text-neutral-400"
-                      : "text-xs text-neutral-600"
-                  }
+      </header>
+
+      {/* Categorised sections */}
+      {SECTION_ORDER.map((category) => {
+        const categoryItems = items.filter((i) => i.category === category);
+        if (categoryItems.length === 0) return null;
+        const style = CATEGORY_STYLES[category];
+
+        return (
+          <section key={category} className="space-y-5">
+            {/* Japanese-style centered section header between two thin lines */}
+            <div className="flex items-center gap-5">
+              <div className={`h-px flex-1 ${style.line}`} />
+              <div className="flex flex-col items-center px-2">
+                <h2 className={`text-sm font-medium tracking-[0.35em] ${style.accent}`}>
+                  {style.label}
+                </h2>
+                <span
+                  className={`mt-1 text-[10px] tracking-[0.15em] ${style.accent} opacity-50`}
                 >
-                  {stat ?? "功能開發中"}
-                </CardContent>
-              </Card>
-            </Link>
-          );
-        })}
-      </div>
+                  {style.nameJa}
+                </span>
+              </div>
+              <div className={`h-px flex-1 ${style.line}`} />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {categoryItems.map((item) => {
+                const stat = statForHref(item.href);
+                const isPlaceholder = stat.kind === "placeholder";
+                return (
+                  <Link key={item.href} href={item.href} className="group block">
+                    <Card
+                      className={`h-full border-l-4 ${style.border} transition-all duration-200 group-hover:-translate-y-0.5 group-hover:shadow-md`}
+                    >
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-lg font-medium text-neutral-900">
+                          {item.label}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {stat.kind === "number" && (
+                          <div>
+                            <div
+                              className={`text-4xl font-light leading-none ${style.accent}`}
+                            >
+                              {stat.value}
+                            </div>
+                            <div className="mt-2 text-xs text-neutral-500">
+                              {stat.unit}
+                            </div>
+                          </div>
+                        )}
+                        {stat.kind === "text" && (
+                          <div>
+                            <div className="text-2xl font-light leading-none text-neutral-400">
+                              ◯
+                            </div>
+                            <div className="mt-2 text-xs text-neutral-500">
+                              {stat.text}
+                            </div>
+                          </div>
+                        )}
+                        {isPlaceholder && (
+                          <div>
+                            <div className="text-4xl font-light leading-none text-neutral-300">
+                              —
+                            </div>
+                            <div className="mt-2 text-xs text-neutral-400">
+                              功能開發中
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }

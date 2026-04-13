@@ -132,28 +132,46 @@ export default async function TreatmentDetailPage({ params }: TreatmentDetailPag
         </CardHeader>
         <CardContent>
           <dl className="grid gap-4 text-sm sm:grid-cols-2">
-            <div>
+            <div className="sm:col-span-2">
               <dt className="text-neutral-500">PRP 品項</dt>
-              <dd className="mt-1 font-medium">
-                {treatment.product.name}
+              <dd className="mt-1 flex flex-wrap items-center gap-2 font-medium">
+                <span>{treatment.product.name}</span>
+                {treatment.product.packageSize != null && treatment.quantity > 0 && (
+                  <span className="rounded-full bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-700 ring-1 ring-inset ring-purple-600/20">
+                    購入套組（{treatment.product.packageSize} 瓶）
+                  </span>
+                )}
+                {treatment.product.packageSize != null && treatment.quantity === 0 && (
+                  <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">
+                    使用既有套組
+                  </span>
+                )}
                 {treatment.product.active === false && (
-                  <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
+                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
                     已停用
                   </span>
                 )}
               </dd>
             </div>
             <div>
-              <dt className="text-neutral-500">數量</dt>
-              <dd className="mt-1 font-mono font-medium">{treatment.quantity}</dd>
+              <dt className="text-neutral-500">本次注射瓶數</dt>
+              <dd className="mt-1 font-mono font-medium">{treatment.vialsUsed} 瓶</dd>
+            </div>
+            <div>
+              <dt className="text-neutral-500">本次計費瓶數</dt>
+              <dd className="mt-1 font-mono font-medium">
+                {treatment.quantity > 0 ? `${treatment.quantity} 瓶` : "0（已預付）"}
+              </dd>
             </div>
             <div>
               <dt className="text-neutral-500">單價（snapshot）</dt>
               <dd className="mt-1 font-medium">{formatTWD(treatment.unitPriceSnapshot)}</dd>
             </div>
             <div>
-              <dt className="text-neutral-500">總金額</dt>
-              <dd className="mt-1 text-lg font-semibold">{formatTWD(treatment.totalAmount)}</dd>
+              <dt className="text-neutral-500">本次總金額</dt>
+              <dd className="mt-1 text-lg font-semibold">
+                {treatment.totalAmount > 0 ? formatTWD(treatment.totalAmount) : "—"}
+              </dd>
             </div>
             <div>
               <dt className="text-neutral-500">醫師抽成比例（snapshot）</dt>

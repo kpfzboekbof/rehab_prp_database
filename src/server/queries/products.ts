@@ -22,7 +22,7 @@ export async function listActiveProducts() {
   return db.pRPProduct.findMany({
     where: { active: true },
     orderBy: { name: "asc" },
-    select: { id: true, name: true, unitPrice: true },
+    select: { id: true, name: true, unitPrice: true, packageSize: true },
   });
 }
 

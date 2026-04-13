@@ -12,6 +12,7 @@ import type { ActionState } from "@/server/actions/products";
 export interface ProductFormDefaults {
   name?: string;
   unitPrice?: number;
+  packageSize?: number | null;
   notes?: string;
 }
 
@@ -67,7 +68,23 @@ export function ProductForm({
             placeholder="12000"
           />
           <p className="text-xs text-neutral-500">
-            整數，單位新台幣。未來調整不會影響既有治療紀錄（有 snapshot）。
+            整數，單位新台幣。對套組品項而言是「每瓶」價格。
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="packageSize">預付套組瓶數</Label>
+          <Input
+            id="packageSize"
+            name="packageSize"
+            type="number"
+            min={1}
+            step={1}
+            defaultValue={defaults?.packageSize ?? ""}
+            placeholder="留空 = 一般品項"
+          />
+          <p className="text-xs text-neutral-500">
+            預付套組請填瓶數（例如 PLT 10 瓶套組填 10）。病人購入時一次付清 套組瓶數 × 單價；後續使用時不重複收費，系統會自動追蹤剩餘瓶數。留空代表一般品項（一次付清一次用完）。
           </p>
         </div>
 

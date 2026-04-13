@@ -11,7 +11,10 @@ import {
 import { TreatmentForm } from "@/components/treatments/treatment-form";
 import { updateTreatment } from "@/server/actions/treatments";
 import { listActiveProducts } from "@/server/queries/products";
-import { getTreatment } from "@/server/queries/treatments";
+import {
+  getPatientPackageBalances,
+  getTreatment,
+} from "@/server/queries/treatments";
 import { requireRole } from "@/server/rbac";
 
 interface EditTreatmentPageProps {
@@ -54,9 +57,27 @@ export default async function EditTreatmentPage({ params }: EditTreatmentPagePro
           id: treatment.product.id,
           name: `${treatment.product.name}（已停用）`,
           unitPrice: treatment.product.unitPrice,
+          packageSize: treatment.product.packageSize,
         },
         ...products,
       ];
+
+  // Pre-load package balances so the form can render the "remaining vials"
+  // hint correctly. Include the current product even if it has no other
+  // history (so the balance lookup hits the right entry).
+  const packageProductIds = productsForForm
+    .filter((p) => p.packageSize != null)
+    .map((p) => p.id);
+  const balances = await getPatientPackageBalances(patientId, packageProductIds);
+
+  // Lock the package mode to the existing record's state so editing a
+  // use-visit can't accidentally turn into a re-purchase.
+  const isPackage = treatment.product.packageSize != null;
+  const lockedMode: "USE" | "PURCHASE" | undefined = isPackage
+    ? treatment.quantity > 0
+      ? "PURCHASE"
+      : "USE"
+    : undefined;
 
   const action = updateTreatment.bind(null, patientId, treatmentId);
 
@@ -95,8 +116,15 @@ export default async function EditTreatmentPage({ params }: EditTreatmentPagePro
           <TreatmentForm
             action={action}
             products={productsForForm}
+            packageBalances={balances.map((b) => ({
+              productId: b.productId,
+              remaining: b.remaining,
+              totalPurchased: b.totalPurchased,
+              totalUsed: b.totalUsed,
+            }))}
             submitLabel="儲存變更"
             cancelHref={`/patients/${patientId}/treatments/${treatmentId}`}
+            lockPackageMode={isPackage}
             defaults={{
               treatmentDate: toDateInput(treatment.treatmentDate),
               bodyPart: treatment.bodyPart,
@@ -105,7 +133,8 @@ export default async function EditTreatmentPage({ params }: EditTreatmentPagePro
               painBefore: treatment.painBefore,
               painImmediateAfter: treatment.painImmediateAfter,
               productId: treatment.product.id,
-              quantity: treatment.quantity,
+              vialsUsed: treatment.vialsUsed,
+              packageMode: lockedMode,
               ultrasoundNote: treatment.ultrasoundNote ?? "",
               physicianNote: treatment.physicianNote ?? "",
             }}

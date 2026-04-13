@@ -51,6 +51,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
             defaults={{
               name: product.name,
               unitPrice: product.unitPrice,
+              packageSize: product.packageSize,
               notes: product.notes ?? "",
             }}
           />

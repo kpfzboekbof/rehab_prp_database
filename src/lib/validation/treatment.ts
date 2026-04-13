@@ -2,13 +2,23 @@ import { z } from "zod";
 import { BodyPart } from "@prisma/client";
 
 /**
- * Validation for TreatmentRecord create/update. Numeric fields arrive from
- * the form as strings; coerce and clamp them here so server actions can
- * trust the parsed shape.
+ * Validation for TreatmentRecord create/update.
+ *
+ * Semantics:
+ * - `vialsUsed` = vials actually injected this visit. Required, >= 1.
+ * - `packageMode` = "USE" | "PURCHASE", optional:
+ *     - For REGULAR products (product.packageSize == null), ignored.
+ *     - For PACKAGE products, required:
+ *         "PURCHASE" = this visit is the upfront purchase. Server will
+ *                      snapshot the full package price (packageSize × unit).
+ *         "USE"      = this visit draws from a previously-purchased
+ *                      package. totalAmount = 0. Server verifies there's
+ *                      enough remaining balance.
  *
  * Snapshot fields (unitPriceSnapshot, totalAmount, commissionRateSnapshot,
- * commissionAmount) are NOT part of the input — they are computed server-side
- * from `productId`, `quantity`, and the doctor's effective commission rate.
+ * commissionAmount) are NOT part of the input — they are computed
+ * server-side from `productId`, `vialsUsed`, `packageMode`, and the
+ * doctor's effective commission rate.
  */
 export const treatmentInputSchema = z.object({
   treatmentDate: z
@@ -35,11 +45,12 @@ export const treatmentInputSchema = z.object({
     ])
     .optional(),
   productId: z.string().trim().min(1, "請選擇 PRP 品項"),
-  quantity: z.coerce
+  vialsUsed: z.coerce
     .number()
-    .int("數量需為正整數")
-    .min(1, "數量至少為 1")
-    .max(100, "數量過大，請確認"),
+    .int("注射瓶數需為整數")
+    .min(1, "本次至少注射 1 瓶")
+    .max(1000, "數量過大，請確認"),
+  packageMode: z.enum(["USE", "PURCHASE"]).optional(),
   ultrasoundNote: z.string().trim().max(2000).optional().or(z.literal("")),
   physicianNote: z.string().trim().max(2000).optional().or(z.literal("")),
 });

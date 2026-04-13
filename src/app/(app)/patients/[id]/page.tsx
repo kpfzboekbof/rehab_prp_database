@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { DeletePatientButton } from "@/components/patients/delete-patient-button";
+import { PackageBalanceCard } from "@/components/treatments/package-balance-card";
 import { TreatmentTable } from "@/components/treatments/treatment-table";
 import { formatTWD } from "@/lib/currency";
 import {
@@ -24,7 +25,10 @@ import {
   listUpcomingForPatient,
 } from "@/server/queries/appointments";
 import { getPatient } from "@/server/queries/patients";
-import { listTreatmentsByPatient } from "@/server/queries/treatments";
+import {
+  getPatientPackageBalances,
+  listTreatmentsByPatient,
+} from "@/server/queries/treatments";
 import { requireSession } from "@/server/rbac";
 
 interface PatientDetailPageProps {
@@ -46,10 +50,16 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
     notFound();
   }
 
-  const [treatments, upcomingAppointments, pastAppointments] = await Promise.all([
+  const [
+    treatments,
+    upcomingAppointments,
+    pastAppointments,
+    packageBalances,
+  ] = await Promise.all([
     listTreatmentsByPatient(patient.id),
     listUpcomingForPatient(patient.id),
     listPastForPatient(patient.id, 10),
+    getPatientPackageBalances(patient.id),
   ]);
 
   const canEdit = session.user.role === "DOCTOR" || session.user.role === "ADMIN";
@@ -158,7 +168,8 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
             )}
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <PackageBalanceCard balances={packageBalances} />
           <TreatmentTable patientId={patient.id} rows={treatments} />
         </CardContent>
       </Card>

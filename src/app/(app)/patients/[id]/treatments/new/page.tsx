@@ -12,6 +12,7 @@ import { TreatmentForm } from "@/components/treatments/treatment-form";
 import { createTreatment } from "@/server/actions/treatments";
 import { listActiveProducts } from "@/server/queries/products";
 import { getPatient } from "@/server/queries/patients";
+import { getPatientPackageBalances } from "@/server/queries/treatments";
 import { requireRole } from "@/server/rbac";
 
 interface NewTreatmentPageProps {
@@ -27,6 +28,13 @@ export default async function NewTreatmentPage({ params }: NewTreatmentPageProps
     listActiveProducts(),
   ]);
   if (!patient) notFound();
+
+  // Pre-load package balances for any active package products so the form
+  // can show "remaining vials" for each one without an extra round trip.
+  const packageProductIds = products
+    .filter((p) => p.packageSize != null)
+    .map((p) => p.id);
+  const balances = await getPatientPackageBalances(patientId, packageProductIds);
 
   const action = createTreatment.bind(null, patientId);
 
@@ -63,6 +71,12 @@ export default async function NewTreatmentPage({ params }: NewTreatmentPageProps
             <TreatmentForm
               action={action}
               products={products}
+              packageBalances={balances.map((b) => ({
+                productId: b.productId,
+                remaining: b.remaining,
+                totalPurchased: b.totalPurchased,
+                totalUsed: b.totalUsed,
+              }))}
               submitLabel="建立治療紀錄"
               cancelHref={`/patients/${patient.id}`}
             />

@@ -14,8 +14,14 @@ function readInput(formData: FormData) {
   return {
     name: formData.get("name")?.toString() ?? "",
     unitPrice: formData.get("unitPrice")?.toString() ?? "",
+    packageSize: formData.get("packageSize")?.toString() ?? "",
     notes: formData.get("notes")?.toString() ?? "",
   };
+}
+
+function resolvePackageSize(value: number | "" | undefined): number | null {
+  if (value === "" || value === undefined) return null;
+  return value;
 }
 
 export async function createProduct(
@@ -35,6 +41,7 @@ export async function createProduct(
       data: {
         name: data.name,
         unitPrice: data.unitPrice,
+        packageSize: resolvePackageSize(data.packageSize),
         notes: data.notes ? data.notes : null,
       },
     });
@@ -76,6 +83,7 @@ export async function updateProduct(
       data: {
         name: data.name,
         unitPrice: data.unitPrice,
+        packageSize: resolvePackageSize(data.packageSize),
         notes: data.notes ? data.notes : null,
       },
     });

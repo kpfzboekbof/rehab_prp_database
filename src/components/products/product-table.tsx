@@ -7,6 +7,7 @@ interface ProductRow {
   id: string;
   name: string;
   unitPrice: number;
+  packageSize: number | null;
   active: boolean;
   notes: string | null;
   updatedAt: Date;
@@ -43,7 +44,14 @@ export function ProductTable({ rows }: ProductTableProps) {
           {rows.map((p) => (
             <tr key={p.id} className={p.active ? "hover:bg-neutral-50" : "bg-neutral-50/50 text-neutral-500"}>
               <td className="px-4 py-3 font-medium text-neutral-900">
-                {p.name}
+                <div className="flex flex-wrap items-center gap-2">
+                  <span>{p.name}</span>
+                  {p.packageSize != null && (
+                    <span className="inline-flex items-center rounded-full bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-700 ring-1 ring-inset ring-purple-600/20">
+                      預付套組 · {p.packageSize} 瓶
+                    </span>
+                  )}
+                </div>
                 {p.notes && (
                   <div className="mt-0.5 line-clamp-1 text-xs text-neutral-500">
                     {p.notes}
@@ -52,6 +60,11 @@ export function ProductTable({ rows }: ProductTableProps) {
               </td>
               <td className="px-4 py-3 text-right font-mono">
                 {formatTWD(p.unitPrice)}
+                {p.packageSize != null && (
+                  <div className="text-[10px] text-neutral-500">
+                    套組總價 {formatTWD(p.unitPrice * p.packageSize)}
+                  </div>
+                )}
               </td>
               <td className="px-4 py-3">
                 {p.active ? (

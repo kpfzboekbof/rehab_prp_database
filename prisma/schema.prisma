@@ -152,6 +152,13 @@ model PRPProduct {
   unitPrice Int // TWD, no fractional cents
   active    Boolean  @default(true)
   notes     String?
+
+  // Null for a regular single-use product (quantity = vialsUsed).
+  // Non-null marks this as a prepaid package — the number is the total
+  // vials included, and the patient pays once at purchase time but
+  // consumes them across multiple visits. See TreatmentRecord.vialsUsed.
+  packageSize Int?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -176,7 +183,8 @@ model TreatmentRecord {
 
   productId         String
   product           PRPProduct @relation(fields: [productId], references: [id])
-  quantity          Int
+  quantity          Int // Billed vials. For regular products: == vialsUsed. For prepaid packages: packageSize on purchase visit, 0 on subsequent use visits.
+  vialsUsed         Int        @default(0) // Vials actually injected this visit. For regular products == quantity.
   unitPriceSnapshot Int // frozen on create
   totalAmount       Int // quantity * unitPriceSnapshot, frozen on create
 

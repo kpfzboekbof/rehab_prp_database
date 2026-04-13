@@ -60,13 +60,18 @@ export default async function TreatmentDetailPage({ params }: TreatmentDetailPag
             <span className="font-mono">{treatment.patient.chartNumber}</span>）
           </p>
         </div>
-        {canEdit && (
+        <div className="flex gap-2">
           <Button asChild variant="outline">
-            <Link href={`/patients/${patientId}/treatments/${treatment.id}/edit`}>
-              編輯
-            </Link>
+            <Link href={`/patients/${patientId}`}>← 回到病人總覽</Link>
           </Button>
-        )}
+          {canEdit && (
+            <Button asChild variant="outline">
+              <Link href={`/patients/${patientId}/treatments/${treatment.id}/edit`}>
+                編輯
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card>
@@ -194,6 +199,14 @@ export default async function TreatmentDetailPage({ params }: TreatmentDetailPag
           </dl>
         </CardContent>
       </Card>
+
+      <div className="flex justify-center pt-2">
+        <Button asChild variant="outline">
+          <Link href={`/patients/${patientId}`}>
+            ← 回到「{treatment.patient.name}」總覽
+          </Link>
+        </Button>
+      </div>
     </div>
   );
 }

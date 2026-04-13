@@ -33,7 +33,6 @@ const CATEGORY_STYLES: Record<
   NavCategory,
   {
     label: string;
-    nameJa: string;
     accent: string; // text colour
     border: string; // left border on the cards
     line: string; // section divider line
@@ -41,21 +40,18 @@ const CATEGORY_STYLES: Record<
 > = {
   clinical: {
     label: "臨床作業",
-    nameJa: "asagi · 浅葱",
     accent: "text-[#1D697C]",
     border: "border-l-[#1D697C]",
     line: "bg-[#1D697C]/30",
   },
   business: {
     label: "業務管理",
-    nameJa: "kikyou · 桔梗",
     accent: "text-[#6A5BA3]",
     border: "border-l-[#6A5BA3]",
     line: "bg-[#6A5BA3]/30",
   },
   admin: {
     label: "系統設定",
-    nameJa: "yanagicha · 柳茶",
     accent: "text-[#91AD70]",
     border: "border-l-[#91AD70]",
     line: "bg-[#91AD70]/30",
@@ -151,19 +147,13 @@ export default async function DashboardPage() {
 
         return (
           <section key={category} className="space-y-5">
-            {/* Japanese-style centered section header between two thin lines */}
             <div className="flex items-center gap-5">
               <div className={`h-px flex-1 ${style.line}`} />
-              <div className="flex flex-col items-center px-2">
-                <h2 className={`text-sm font-medium tracking-[0.35em] ${style.accent}`}>
-                  {style.label}
-                </h2>
-                <span
-                  className={`mt-1 text-[10px] tracking-[0.15em] ${style.accent} opacity-50`}
-                >
-                  {style.nameJa}
-                </span>
-              </div>
+              <h2
+                className={`px-2 text-sm font-medium tracking-[0.35em] ${style.accent}`}
+              >
+                {style.label}
+              </h2>
               <div className={`h-px flex-1 ${style.line}`} />
             </div>
 

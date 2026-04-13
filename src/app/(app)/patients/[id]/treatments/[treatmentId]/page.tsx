@@ -164,8 +164,23 @@ export default async function TreatmentDetailPage({ params }: TreatmentDetailPag
               </dd>
             </div>
             <div>
-              <dt className="text-neutral-500">單價（snapshot）</dt>
-              <dd className="mt-1 font-medium">{formatTWD(treatment.unitPriceSnapshot)}</dd>
+              <dt className="text-neutral-500">
+                {treatment.product.packageSize != null ? "套組總價（snapshot）" : "單價（snapshot）"}
+              </dt>
+              <dd className="mt-1 font-medium">
+                {formatTWD(treatment.unitPriceSnapshot)}
+                {treatment.product.packageSize != null && (
+                  <span className="ml-1 text-xs text-neutral-500">
+                    （平均每瓶{" "}
+                    {formatTWD(
+                      Math.round(
+                        treatment.unitPriceSnapshot / treatment.product.packageSize,
+                      ),
+                    )}
+                    ）
+                  </span>
+                )}
+              </dd>
             </div>
             <div>
               <dt className="text-neutral-500">本次總金額</dt>

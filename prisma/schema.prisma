@@ -147,10 +147,16 @@ model Patient {
 }
 
 model PRPProduct {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  unitPrice Int // TWD, no fractional cents
-  active    Boolean  @default(true)
+  id   String  @id @default(cuid())
+  name String  @unique
+  // Integer NTD. Meaning depends on packageSize:
+  //   - Regular product (packageSize = null): per-vial price.
+  //   - Package product (packageSize != null): TOTAL package price (the
+  //     whole set is paid once upfront). Average per-vial is computed
+  //     for display only as `unitPrice / packageSize` and is not stored
+  //     separately because some package totals don't divide evenly.
+  unitPrice Int
+  active    Boolean @default(true)
   notes     String?
 
   // Null for a regular single-use product (quantity = vialsUsed).

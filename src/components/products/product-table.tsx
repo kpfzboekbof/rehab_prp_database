@@ -62,7 +62,7 @@ export function ProductTable({ rows }: ProductTableProps) {
                 {formatTWD(p.unitPrice)}
                 {p.packageSize != null && (
                   <div className="text-[10px] text-neutral-500">
-                    套組總價 {formatTWD(p.unitPrice * p.packageSize)}
+                    平均每瓶 {formatTWD(Math.round(p.unitPrice / p.packageSize))}
                   </div>
                 )}
               </td>

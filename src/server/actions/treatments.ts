@@ -15,17 +15,29 @@ import { requireRole } from "@/server/rbac";
  *
  * On create AND on update, we freeze:
  *   - unitPriceSnapshot      ← product.unitPrice at the time of save
- *   - totalAmount            ← billedQuantity * unitPriceSnapshot
+ *   - totalAmount            ← see below; depends on product type
  *   - commissionRateSnapshot ← doctor's effective rate on treatmentDate
  *   - commissionAmount       ← totalAmount * rate (rounded to integer TWD)
  *
- * "Billed quantity" depends on product type:
- *   - Regular product: billedQuantity = vialsUsed (the visit IS the purchase).
- *   - Package product, mode = PURCHASE: billedQuantity = product.packageSize
- *     (the patient pays for the whole package upfront; vialsUsed records
- *     how many were injected on this visit).
- *   - Package product, mode = USE: billedQuantity = 0 (no new charge);
- *     vialsUsed draws down the patient's existing package balance.
+ * `unitPrice` has dual meaning depending on whether the product is a
+ * package (see PRPProduct schema comment):
+ *   - Regular product: per-vial price.
+ *   - Package product: TOTAL package price (the whole set is paid once
+ *     upfront). Average per-vial is shown as a UI hint.
+ *
+ * "Billed quantity" + totalAmount depend on product type:
+ *   - Regular product:
+ *       billedQuantity = vialsUsed
+ *       totalAmount    = vialsUsed × unitPriceSnapshot  (per-vial × vials)
+ *   - Package product, mode = PURCHASE:
+ *       billedQuantity = product.packageSize  (kept for balance accounting)
+ *       totalAmount    = unitPriceSnapshot    (the WHOLE package price;
+ *                                              NOT multiplied by packageSize)
+ *       vialsUsed      = vials actually injected on the purchase visit.
+ *   - Package product, mode = USE:
+ *       billedQuantity = 0 (no new charge)
+ *       totalAmount    = 0
+ *       vialsUsed      = vials injected this visit (deducts balance).
  *
  * Snapshots are NEVER recomputed from source tables after the record exists,
  * so monthly revenue / commission reports are a pure aggregation over
@@ -99,10 +111,12 @@ async function resolveAmounts(params: {
   const unitPriceSnapshot = product.unitPrice;
 
   let billedQuantity: number;
+  let totalAmount: number;
 
   if (product.packageSize == null) {
-    // Regular product: this visit IS the purchase.
+    // Regular product: this visit IS the purchase. unitPrice is per-vial.
     billedQuantity = params.vialsUsed;
+    totalAmount = billedQuantity * unitPriceSnapshot;
   } else {
     // Package product — must specify mode.
     if (!params.packageMode) {
@@ -115,7 +129,12 @@ async function resolveAmounts(params: {
           error: `本次使用瓶數（${params.vialsUsed}）不可超過套組總瓶數（${product.packageSize}）`,
         };
       }
+      // Patient pays the WHOLE package upfront. unitPrice for a package
+      // already represents the total (see PRPProduct schema). Don't
+      // multiply by packageSize — the package size is not divisible for
+      // some PLT products.
       billedQuantity = product.packageSize;
+      totalAmount = unitPriceSnapshot;
     } else {
       // USE — verify there's enough remaining balance for this patient.
       const agg = await db.treatmentRecord.aggregate({
@@ -138,10 +157,10 @@ async function resolveAmounts(params: {
         };
       }
       billedQuantity = 0;
+      totalAmount = 0;
     }
   }
 
-  const totalAmount = billedQuantity * unitPriceSnapshot;
   const { rate } = await getEffectiveCommissionRate(
     params.doctorId,
     params.treatmentDate,

@@ -34,7 +34,8 @@ export function PackageBalanceCard({ balances }: PackageBalanceCardProps) {
                 <div className="text-sm font-medium text-neutral-900">
                   {b.productName}
                   <span className="ml-1 text-xs text-neutral-500">
-                    （每瓶 {formatTWD(b.unitPrice)} · 套組 {b.packageSize} 瓶）
+                    （{b.packageSize} 瓶 · 整套 {formatTWD(b.unitPrice)}，平均每瓶{" "}
+                    {formatTWD(Math.round(b.unitPrice / b.packageSize))}）
                   </span>
                 </div>
                 <div className="text-xs text-neutral-600">

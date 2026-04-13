@@ -117,12 +117,14 @@ export function TreatmentForm({
   }
 
   // Live preview total for display only (server snapshots its own values).
+  // unitPrice for a package IS the total package price (not per-vial),
+  // so on PURCHASE we use it as-is. For regular products it's per-vial.
   let previewTotal = 0;
   if (selectedProduct) {
     if (!isPackage) {
       previewTotal = selectedProduct.unitPrice * Math.max(0, vialsUsed || 0);
     } else if (packageMode === "PURCHASE") {
-      previewTotal = selectedProduct.unitPrice * (selectedProduct.packageSize ?? 0);
+      previewTotal = selectedProduct.unitPrice;
     } else {
       previewTotal = 0; // USE: already paid
     }
@@ -264,8 +266,8 @@ export function TreatmentForm({
               <option key={p.id} value={p.id}>
                 {p.name}
                 {p.packageSize != null
-                  ? `（套組 ${p.packageSize} 瓶 · ${formatTWD(p.unitPrice)}/瓶）`
-                  : `（${formatTWD(p.unitPrice)}）`}
+                  ? `（套組 ${p.packageSize} 瓶 · 整套 ${formatTWD(p.unitPrice)}）`
+                  : `（${formatTWD(p.unitPrice)} / 瓶）`}
               </option>
             ))}
           </select>
@@ -325,10 +327,7 @@ export function TreatmentForm({
                     disabled={lockPackageMode}
                   />
                   購入新套組（{selectedProduct.packageSize} 瓶 ·{" "}
-                  {formatTWD(
-                    selectedProduct.unitPrice * selectedProduct.packageSize,
-                  )}
-                  ）
+                  {formatTWD(selectedProduct.unitPrice)}）
                 </label>
 
                 {lockPackageMode && (
@@ -378,7 +377,7 @@ export function TreatmentForm({
             <div className="mt-1 text-xs text-neutral-500">
               {isPackage
                 ? packageMode === "PURCHASE"
-                  ? `購入新套組：${selectedProduct?.packageSize} 瓶 × ${formatTWD(selectedProduct?.unitPrice ?? 0)}`
+                  ? `購入新套組：${selectedProduct?.packageSize} 瓶整套 ${formatTWD(selectedProduct?.unitPrice ?? 0)}`
                   : "使用現有套組，本次不重複收費"
                 : "依品項單價 × 瓶數計算"}
             </div>

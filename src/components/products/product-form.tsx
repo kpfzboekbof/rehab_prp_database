@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { formatTWD } from "@/lib/currency";
 import type { ActionState } from "@/server/actions/products";
 
 export interface ProductFormDefaults {
@@ -34,6 +35,16 @@ export function ProductForm({
     null,
   );
 
+  const [unitPrice, setUnitPrice] = useState<number>(defaults?.unitPrice ?? 0);
+  const [packageSize, setPackageSize] = useState<number | "">(
+    defaults?.packageSize ?? "",
+  );
+
+  const isPackage = typeof packageSize === "number" && packageSize > 0;
+  const averagePerVial = isPackage && unitPrice > 0
+    ? Math.round(unitPrice / (packageSize as number))
+    : 0;
+
   const errorMessage = state && state.ok === false ? state.error : null;
 
   return (
@@ -55,7 +66,8 @@ export function ProductForm({
 
         <div className="flex flex-col gap-2">
           <Label htmlFor="unitPrice">
-            單價 (NT$) <span className="text-red-600">*</span>
+            {isPackage ? "套組總價 (NT$)" : "單價 (NT$)"}{" "}
+            <span className="text-red-600">*</span>
           </Label>
           <Input
             id="unitPrice"
@@ -64,12 +76,29 @@ export function ProductForm({
             min={0}
             step={100}
             required
-            defaultValue={defaults?.unitPrice ?? ""}
-            placeholder="12000"
+            value={Number.isFinite(unitPrice) && unitPrice >= 0 ? unitPrice : ""}
+            onChange={(e) => setUnitPrice(Number.parseInt(e.target.value, 10) || 0)}
+            placeholder={isPackage ? "10000" : "12000"}
           />
           <p className="text-xs text-neutral-500">
-            整數，單位新台幣。對套組品項而言是「每瓶」價格。
+            {isPackage ? (
+              <>
+                病人購入此套組時一次付清的<strong>整套價格</strong>。例如 PLT 6 瓶套組共 NT$10,000，這裡就填 10000。
+              </>
+            ) : (
+              <>整數，單位新台幣。每瓶價格。</>
+            )}
           </p>
+          {isPackage && averagePerVial > 0 && (
+            <div className="rounded-md border border-purple-200 bg-purple-50 px-3 py-2 text-xs text-purple-800">
+              平均每瓶 <strong>{formatTWD(averagePerVial)}</strong>
+              {unitPrice % (packageSize as number) !== 0 && (
+                <span className="ml-1 text-purple-600">
+                  （{formatTWD(unitPrice)} ÷ {packageSize} 瓶，無法整除，僅作顯示）
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-2">
@@ -80,11 +109,15 @@ export function ProductForm({
             type="number"
             min={1}
             step={1}
-            defaultValue={defaults?.packageSize ?? ""}
+            value={packageSize === "" ? "" : packageSize}
+            onChange={(e) => {
+              const v = Number.parseInt(e.target.value, 10);
+              setPackageSize(Number.isFinite(v) && v > 0 ? v : "");
+            }}
             placeholder="留空 = 一般品項"
           />
           <p className="text-xs text-neutral-500">
-            預付套組請填瓶數（例如 PLT 10 瓶套組填 10）。病人購入時一次付清 套組瓶數 × 單價；後續使用時不重複收費，系統會自動追蹤剩餘瓶數。留空代表一般品項（一次付清一次用完）。
+            預付套組請填瓶數（例如 PLT 6 瓶套組填 6）。病人購入時一次付清整套總價；後續使用時不重複收費，系統會自動追蹤剩餘瓶數。留空代表一般品項。
           </p>
         </div>
 

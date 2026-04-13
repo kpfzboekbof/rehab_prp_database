@@ -13,13 +13,9 @@ import {
 import { DeletePatientButton } from "@/components/patients/delete-patient-button";
 import { PackageBalanceCard } from "@/components/treatments/package-balance-card";
 import { TreatmentTable } from "@/components/treatments/treatment-table";
+import { APPOINTMENT_SESSION_LABELS } from "@/lib/appointment-session";
 import { formatTWD } from "@/lib/currency";
-import {
-  ageAt,
-  formatDateTW,
-  formatDateTimeTW,
-  formatTimeTW,
-} from "@/lib/date";
+import { ageAt, formatDateTW, formatDateTimeTW } from "@/lib/date";
 import {
   listPastForPatient,
   listUpcomingForPatient,
@@ -207,8 +203,8 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
                         <span className="text-sm font-medium text-neutral-900">
                           {formatDateTW(a.scheduledAt)}
                         </span>
-                        <span className="font-mono text-sm text-neutral-700">
-                          {formatTimeTW(a.scheduledAt)}
+                        <span className="inline-flex items-center rounded-full bg-[#1D697C]/10 px-2 py-0.5 text-xs font-medium text-[#1D697C] ring-1 ring-inset ring-[#1D697C]/20">
+                          {APPOINTMENT_SESSION_LABELS[a.session]}
                         </span>
                         <AppointmentStatusBadge status={a.status} />
                       </div>
@@ -241,8 +237,8 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
                         <span className="font-medium">
                           {formatDateTW(a.scheduledAt)}
                         </span>
-                        <span className="font-mono">
-                          {formatTimeTW(a.scheduledAt)}
+                        <span className="inline-flex items-center rounded-full bg-neutral-100 px-1.5 py-0 text-[10px] font-medium text-neutral-600">
+                          {APPOINTMENT_SESSION_LABELS[a.session]}
                         </span>
                         <AppointmentStatusBadge status={a.status} size="sm" />
                       </div>

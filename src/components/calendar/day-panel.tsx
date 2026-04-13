@@ -1,14 +1,16 @@
 import Link from "next/link";
-import type { AppointmentStatus } from "@prisma/client";
+import type { AppointmentSession, AppointmentStatus } from "@prisma/client";
 
 import { AppointmentStatusBadge } from "@/components/calendar/appointment-status-badge";
 import { AppointmentStatusButtons } from "@/components/calendar/appointment-status-buttons";
 import { Button } from "@/components/ui/button";
-import { formatDateTW, formatTimeTW } from "@/lib/date";
+import { APPOINTMENT_SESSION_LABELS } from "@/lib/appointment-session";
+import { formatDateTW } from "@/lib/date";
 
 export interface DayAppointment {
   id: string;
   scheduledAt: Date;
+  session: AppointmentSession;
   status: AppointmentStatus;
   reason: string | null;
   patient: {
@@ -55,8 +57,8 @@ export function DayPanel({ date, appointments }: DayPanelProps) {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-sm font-semibold text-neutral-900">
-                      {formatTimeTW(a.scheduledAt)}
+                    <span className="inline-flex items-center rounded-full bg-[#1D697C]/10 px-2 py-0.5 text-xs font-medium text-[#1D697C] ring-1 ring-inset ring-[#1D697C]/20">
+                      {APPOINTMENT_SESSION_LABELS[a.session]}
                     </span>
                     <Link
                       href={`/patients/${a.patient.id}`}

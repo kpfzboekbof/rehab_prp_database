@@ -53,6 +53,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
         appointments={monthAppointments.map((a) => ({
           id: a.id,
           scheduledAt: a.scheduledAt,
+          session: a.session,
           status: a.status,
           patient: { id: a.patient.id, name: a.patient.name },
         }))}
@@ -63,6 +64,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
         appointments={dayAppointments.map((a) => ({
           id: a.id,
           scheduledAt: a.scheduledAt,
+          session: a.session,
           status: a.status,
           reason: a.reason,
           patient: {

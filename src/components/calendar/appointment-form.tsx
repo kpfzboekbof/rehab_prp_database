@@ -2,15 +2,14 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
-import { AppointmentStatus } from "@prisma/client";
+import { AppointmentSession, AppointmentStatus } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  APPOINTMENT_STATUS_LABELS,
-} from "@/lib/appointment-status";
+import { APPOINTMENT_SESSION_OPTIONS } from "@/lib/appointment-session";
+import { APPOINTMENT_STATUS_LABELS } from "@/lib/appointment-status";
 import type { ActionState } from "@/server/actions/appointments";
 
 export interface PatientOption {
@@ -21,7 +20,8 @@ export interface PatientOption {
 
 export interface AppointmentFormDefaults {
   patientId?: string;
-  scheduledAt?: string; // YYYY-MM-DDTHH:mm
+  scheduledDate?: string; // YYYY-MM-DD
+  session?: AppointmentSession;
   status?: AppointmentStatus;
   reason?: string;
   sourceTreatmentId?: string;
@@ -71,6 +71,8 @@ export function AppointmentForm({
       ? patients.find((p) => p.id === lockedPatientId)
       : null;
 
+  const defaultSession = defaults?.session ?? "MORNING";
+
   return (
     <form action={formAction} className="flex flex-col gap-5">
       <div className="grid gap-5 sm:grid-cols-2">
@@ -107,21 +109,47 @@ export function AppointmentForm({
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="scheduledAt">
-            回診時間 <span className="text-red-600">*</span>
+          <Label htmlFor="scheduledDate">
+            回診日期 <span className="text-red-600">*</span>
           </Label>
           <Input
-            id="scheduledAt"
-            name="scheduledAt"
-            type="datetime-local"
+            id="scheduledDate"
+            name="scheduledDate"
+            type="date"
             required
-            defaultValue={defaults?.scheduledAt ?? ""}
+            defaultValue={defaults?.scheduledDate ?? ""}
           />
-          <p className="text-xs text-neutral-500">時區為台北（UTC+8）。</p>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label>
+            診次 <span className="text-red-600">*</span>
+          </Label>
+          <div className="grid grid-cols-3 gap-2">
+            {APPOINTMENT_SESSION_OPTIONS.map((opt) => (
+              <label
+                key={opt.value}
+                className="group flex cursor-pointer flex-col items-center rounded-md border border-neutral-200 bg-white px-3 py-2 text-center transition-colors has-[:checked]:border-[#1D697C] has-[:checked]:bg-[#1D697C]/10 has-[:checked]:text-[#1D697C]"
+              >
+                <input
+                  type="radio"
+                  name="session"
+                  value={opt.value}
+                  defaultChecked={opt.value === defaultSession}
+                  className="sr-only"
+                  required
+                />
+                <span className="text-sm font-medium">{opt.label}</span>
+                <span className="text-[10px] text-neutral-500 group-has-[:checked]:text-[#1D697C]/70">
+                  {opt.hint}
+                </span>
+              </label>
+            ))}
+          </div>
         </div>
 
         {showStatus && (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 sm:col-span-2">
             <Label htmlFor="status">狀態</Label>
             <select
               id="status"

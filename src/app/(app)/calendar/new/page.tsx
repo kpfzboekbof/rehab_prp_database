@@ -22,21 +22,19 @@ interface NewAppointmentPageProps {
   }>;
 }
 
-function defaultScheduledAt(dateParam: string | undefined): string {
+function defaultScheduledDate(dateParam: string | undefined): string {
   if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
-    // Default time 10:00 on the given day.
-    return `${dateParam}T10:00`;
+    return dateParam;
   }
-  // Otherwise tomorrow 10:00 in Taipei.
+  // Otherwise default to tomorrow (in Taipei).
   const now = new Date();
   now.setDate(now.getDate() + 1);
-  const yyyy = new Intl.DateTimeFormat("en-CA", {
+  return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Taipei",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   }).format(now);
-  return `${yyyy}T10:00`;
 }
 
 export default async function NewAppointmentPage({ searchParams }: NewAppointmentPageProps) {
@@ -111,7 +109,8 @@ export default async function NewAppointmentPage({ searchParams }: NewAppointmen
               patients={patients}
               lockedPatientId={lockedPatientId}
               defaults={{
-                scheduledAt: defaultScheduledAt(date),
+                scheduledDate: defaultScheduledDate(date),
+                session: "MORNING",
                 sourceTreatmentId: sourceTreatmentId ?? "",
               }}
               submitLabel="建立回診"

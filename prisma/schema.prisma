@@ -120,6 +120,15 @@ enum AppointmentStatus {
   CANCELLED
 }
 
+/// 診次：早診 / 午診 / 晚診。跟 scheduledAt 搭配使用 —
+/// 新建的回診紀錄 scheduledAt 固定為 Taipei 午夜（代表當日），
+/// 具體時段用這個 enum 表達。enum 的宣告順序就是排序順序。
+enum AppointmentSession {
+  MORNING
+  AFTERNOON
+  EVENING
+}
+
 // ---------- Domain tables ----------
 
 model Patient {
@@ -216,8 +225,9 @@ model FollowUpAppointment {
   sourceTreatmentId String?
   sourceTreatment   TreatmentRecord? @relation(fields: [sourceTreatmentId], references: [id], onDelete: SetNull)
 
-  scheduledAt DateTime
-  status      AppointmentStatus @default(SCHEDULED)
+  scheduledAt DateTime // Taipei-midnight of the appointment day for new records (the time component is meaningless; use `session` for time-of-day).
+  session     AppointmentSession @default(MORNING)
+  status      AppointmentStatus  @default(SCHEDULED)
   reason      String?
 
   createdAt DateTime @default(now())

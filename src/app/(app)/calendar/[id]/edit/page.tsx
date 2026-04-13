@@ -9,12 +9,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { AppointmentForm } from "@/components/calendar/appointment-form";
+import { taipeiDateKey } from "@/lib/date";
 import { updateAppointment } from "@/server/actions/appointments";
 import {
   getAppointment,
   listPatientsForPicker,
 } from "@/server/queries/appointments";
-import { utcToTaipeiDateTimeInput } from "@/lib/date";
 import { requireRole } from "@/server/rbac";
 
 interface EditAppointmentPageProps {
@@ -47,7 +47,7 @@ export default async function EditAppointmentPage({ params }: EditAppointmentPag
         <CardHeader>
           <CardTitle>編輯回診排程</CardTitle>
           <CardDescription>
-            修改「{appointment.patient.name}」的回診時間或狀態
+            修改「{appointment.patient.name}」的回診日期、診次或狀態
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -57,7 +57,8 @@ export default async function EditAppointmentPage({ params }: EditAppointmentPag
             showStatus={true}
             defaults={{
               patientId: appointment.patientId,
-              scheduledAt: utcToTaipeiDateTimeInput(appointment.scheduledAt),
+              scheduledDate: taipeiDateKey(appointment.scheduledAt),
+              session: appointment.session,
               status: appointment.status,
               reason: appointment.reason ?? "",
               sourceTreatmentId: appointment.sourceTreatmentId ?? "",

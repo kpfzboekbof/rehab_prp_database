@@ -1,14 +1,21 @@
 import Link from "next/link";
-import type { AppointmentStatus, FollowUpCall, User } from "@prisma/client";
+import type {
+  AppointmentSession,
+  AppointmentStatus,
+  FollowUpCall,
+  User,
+} from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 import { AppointmentStatusBadge } from "@/components/calendar/appointment-status-badge";
+import { APPOINTMENT_SESSION_LABELS } from "@/lib/appointment-session";
 import { BODY_PART_LABELS } from "@/lib/body-parts";
-import { formatDateTimeTW, formatDateTW, formatTimeTW, taipeiDateKey } from "@/lib/date";
+import { formatDateTimeTW, formatDateTW, taipeiDateKey } from "@/lib/date";
 
 interface ReminderRow {
   id: string;
   scheduledAt: Date;
+  session: AppointmentSession;
   status: AppointmentStatus;
   reason: string | null;
   patient: {
@@ -93,7 +100,10 @@ export function ReminderCard({ row }: ReminderCardProps) {
 
           <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
             <span className="font-medium text-neutral-900">
-              {formatDateTW(row.scheduledAt)} {formatTimeTW(row.scheduledAt)}
+              {formatDateTW(row.scheduledAt)}
+            </span>
+            <span className="inline-flex items-center rounded-full bg-[#1D697C]/10 px-2 py-0.5 text-xs font-medium text-[#1D697C] ring-1 ring-inset ring-[#1D697C]/20">
+              {APPOINTMENT_SESSION_LABELS[row.session]}
             </span>
             <span
               className={

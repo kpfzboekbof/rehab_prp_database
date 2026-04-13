@@ -1,14 +1,15 @@
 import Link from "next/link";
-import type { AppointmentStatus } from "@prisma/client";
+import type { AppointmentSession, AppointmentStatus } from "@prisma/client";
 
-import { AppointmentStatusBadge } from "@/components/calendar/appointment-status-badge";
+import { APPOINTMENT_SESSION_LABELS } from "@/lib/appointment-session";
 import { statusIsDone } from "@/lib/appointment-status";
-import { taipeiDateKey, formatTimeTW } from "@/lib/date";
+import { taipeiDateKey } from "@/lib/date";
 import { cn } from "@/lib/utils";
 
 export interface MonthCalendarAppointment {
   id: string;
   scheduledAt: Date;
+  session: AppointmentSession;
   status: AppointmentStatus;
   patient: { id: string; name: string };
 }
@@ -191,7 +192,7 @@ export function MonthCalendar({
                         : "bg-blue-50 text-blue-800",
                     )}
                   >
-                    {formatTimeTW(a.scheduledAt)} {a.patient.name}
+                    {APPOINTMENT_SESSION_LABELS[a.session]} {a.patient.name}
                   </div>
                 ))}
                 {dayAppointments.length > 3 && (

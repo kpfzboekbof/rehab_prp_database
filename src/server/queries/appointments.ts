@@ -15,6 +15,13 @@ const appointmentInclude = {
   followUpCall: { select: { id: true } },
 } satisfies Prisma.FollowUpAppointmentInclude;
 
+// Order by date ascending, then by session enum order (MORNING < AFTERNOON < EVENING)
+// so same-day appointments are listed earliest-session first.
+const appointmentOrder = [
+  { scheduledAt: "asc" },
+  { session: "asc" },
+] satisfies Prisma.FollowUpAppointmentOrderByWithRelationInput[];
+
 /**
  * All appointments whose `scheduledAt` falls within the given Taipei month.
  * The window is `[first day 00:00 Taipei, first day of next month 00:00 Taipei)`.
@@ -32,7 +39,7 @@ export async function listAppointmentsForMonth(year: number, month: number) {
     where: {
       scheduledAt: { gte: start, lt: end },
     },
-    orderBy: { scheduledAt: "asc" },
+    orderBy: appointmentOrder,
     include: appointmentInclude,
   });
 }
@@ -48,7 +55,7 @@ export async function listAppointmentsForDay(yyyyMmDd: string) {
         lt: taipeiDayEnd(yyyyMmDd),
       },
     },
-    orderBy: { scheduledAt: "asc" },
+    orderBy: appointmentOrder,
     include: appointmentInclude,
   });
 }
@@ -61,36 +68,57 @@ export async function getAppointment(id: string) {
 }
 
 /**
- * Upcoming (scheduledAt >= now) non-cancelled appointments for a patient.
- * Used on the patient detail page.
+ * Upcoming (scheduledAt >= today-start-Taipei) non-cancelled appointments
+ * for a patient. Used on the patient detail page.
+ *
+ * `scheduledAt` is stored as Taipei-midnight of the appointment day,
+ * so "appointments from today onwards" means `gte` today's Taipei-midnight.
  */
 export async function listUpcomingForPatient(patientId: string, limit = 20) {
+  const today = new Date();
+  const todayKeyParts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Taipei",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(today);
+  const todayStart = taipeiDayStart(todayKeyParts);
+
   return db.followUpAppointment.findMany({
     where: {
       patientId,
-      scheduledAt: { gte: new Date() },
+      scheduledAt: { gte: todayStart },
       status: { notIn: ["CANCELLED"] },
     },
-    orderBy: { scheduledAt: "asc" },
+    orderBy: appointmentOrder,
     take: limit,
     include: appointmentInclude,
   });
 }
 
 /**
- * Past appointments for a patient (scheduledAt < now OR status COMPLETED/NO_SHOW/CANCELLED).
+ * Past appointments for a patient (scheduledAt < today OR a terminal status).
  * Used on the patient detail page to show history.
  */
 export async function listPastForPatient(patientId: string, limit = 20) {
+  const today = new Date();
+  const todayKeyParts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Taipei",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(today);
+  const todayStart = taipeiDayStart(todayKeyParts);
+
   return db.followUpAppointment.findMany({
     where: {
       patientId,
       OR: [
-        { scheduledAt: { lt: new Date() } },
+        { scheduledAt: { lt: todayStart } },
         { status: { in: ["COMPLETED", "NO_SHOW", "CANCELLED"] } },
       ],
     },
-    orderBy: { scheduledAt: "desc" },
+    orderBy: [{ scheduledAt: "desc" }, { session: "desc" }],
     take: limit,
     include: appointmentInclude,
   });

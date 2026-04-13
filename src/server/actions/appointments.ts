@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { AppointmentStatus } from "@prisma/client";
 
 import { db } from "@/lib/db";
-import { taipeiDateTimeToUTC, taipeiDateKey } from "@/lib/date";
+import { taipeiDateKey, taipeiDayStart } from "@/lib/date";
 import {
   appointmentInputSchema,
   appointmentStatusSchema,
@@ -24,7 +24,8 @@ export type ActionState = { ok: false; error: string } | { ok: true } | null;
 function readInput(formData: FormData) {
   return {
     patientId: formData.get("patientId")?.toString() ?? "",
-    scheduledAt: formData.get("scheduledAt")?.toString() ?? "",
+    scheduledDate: formData.get("scheduledDate")?.toString() ?? "",
+    session: formData.get("session")?.toString() ?? "",
     status: formData.get("status")?.toString() || undefined,
     reason: formData.get("reason")?.toString() ?? "",
     sourceTreatmentId: formData.get("sourceTreatmentId")?.toString() ?? "",
@@ -63,12 +64,15 @@ export async function createAppointment(
     }
   }
 
-  const scheduledAtUTC = taipeiDateTimeToUTC(data.scheduledAt);
+  // scheduledAt stores the Taipei midnight of the appointment day.
+  // Time-of-day lives in `session`.
+  const scheduledAtUTC = taipeiDayStart(data.scheduledDate);
 
-  const created = await db.followUpAppointment.create({
+  await db.followUpAppointment.create({
     data: {
       patientId: data.patientId,
       scheduledAt: scheduledAtUTC,
+      session: data.session,
       status: data.status ?? AppointmentStatus.SCHEDULED,
       reason: data.reason ? data.reason : null,
       sourceTreatmentId: data.sourceTreatmentId ? data.sourceTreatmentId : null,
@@ -120,13 +124,14 @@ export async function updateAppointment(
     }
   }
 
-  const scheduledAtUTC = taipeiDateTimeToUTC(data.scheduledAt);
+  const scheduledAtUTC = taipeiDayStart(data.scheduledDate);
 
   await db.followUpAppointment.update({
     where: { id },
     data: {
       patientId: data.patientId,
       scheduledAt: scheduledAtUTC,
+      session: data.session,
       status: data.status ?? AppointmentStatus.SCHEDULED,
       reason: data.reason ? data.reason : null,
       sourceTreatmentId: data.sourceTreatmentId ? data.sourceTreatmentId : null,

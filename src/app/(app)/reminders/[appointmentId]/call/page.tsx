@@ -10,13 +10,9 @@ import {
 } from "@/components/ui/card";
 import { AppointmentStatusBadge } from "@/components/calendar/appointment-status-badge";
 import { FollowUpCallForm } from "@/components/reminders/follow-up-call-form";
+import { APPOINTMENT_SESSION_LABELS } from "@/lib/appointment-session";
 import { BODY_PART_LABELS } from "@/lib/body-parts";
-import {
-  ageAt,
-  formatDateTW,
-  formatDateTimeTW,
-  formatTimeTW,
-} from "@/lib/date";
+import { ageAt, formatDateTW, formatDateTimeTW } from "@/lib/date";
 import { recordFollowUpCall } from "@/server/actions/follow-up-calls";
 import { getAppointmentForCall } from "@/server/queries/reminders";
 import { requireRole } from "@/server/rbac";
@@ -86,10 +82,12 @@ export default async function FollowUpCallPage({ params }: CallPageProps) {
               </dd>
             </div>
             <div>
-              <dt className="text-neutral-500">預約時間</dt>
+              <dt className="text-neutral-500">預約日期</dt>
               <dd className="mt-1 font-medium">
-                {formatDateTW(appointment.scheduledAt)}{" "}
-                {formatTimeTW(appointment.scheduledAt)}
+                {formatDateTW(appointment.scheduledAt)}
+                <span className="ml-2 inline-flex items-center rounded-full bg-[#1D697C]/10 px-2 py-0.5 text-xs font-medium text-[#1D697C] ring-1 ring-inset ring-[#1D697C]/20">
+                  {APPOINTMENT_SESSION_LABELS[appointment.session]}
+                </span>
               </dd>
             </div>
             <div className="sm:col-span-2">

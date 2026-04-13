@@ -1,19 +1,20 @@
 import { z } from "zod";
-import { AppointmentStatus } from "@prisma/client";
+import { AppointmentSession, AppointmentStatus } from "@prisma/client";
 
 /**
- * Follow-up appointment input. `scheduledAt` comes from an
- * `<input type="datetime-local">` as `YYYY-MM-DDTHH:mm`; the server action
- * converts it to a UTC Date via `taipeiDateTimeToUTC`.
+ * Follow-up appointment input. The form gives us a calendar date
+ * (`YYYY-MM-DD`) and a session (早診/午診/晚診); the server action
+ * converts the date into a Taipei-midnight UTC `Date` and stores it
+ * in `scheduledAt`, while `session` goes into its own column.
  */
 export const appointmentInputSchema = z.object({
   patientId: z.string().trim().min(1, "請選擇病人"),
-  scheduledAt: z
+  scheduledDate: z
     .string()
-    .regex(
-      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/,
-      "回診時間格式需為 YYYY-MM-DDTHH:mm",
-    ),
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "回診日期格式需為 YYYY-MM-DD"),
+  session: z.nativeEnum(AppointmentSession, {
+    errorMap: () => ({ message: "請選擇診次" }),
+  }),
   status: z.nativeEnum(AppointmentStatus).optional(),
   reason: z
     .string()

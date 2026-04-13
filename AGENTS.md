@@ -24,4 +24,9 @@ Key renames / differences you are likely to trip on:
   - Enum columns are native Postgres enum types — adding a value needs a migration.
   - Migrations live in `prisma/migrations/` and are applied via `prisma migrate deploy` (runtime) or `prisma migrate dev` (local schema iteration).
   - `DATABASE_URL` must point at a pooled connection (Neon pgBouncer); `DIRECT_URL` must point at the direct connection and is used only by Prisma Migrate.
+- **Migrations are applied manually, not on Vercel build.** `vercel-build` only runs `prisma generate && next build`. We used to chain `prisma migrate deploy` into the build, but Neon free-tier compute cold-starts occasionally blew past Prisma's short connect timeout and failed the whole deploy. When you add a new migration:
+  1. `npx prisma migrate dev --name <description>` against your local dev DB (creates the SQL file + applies locally).
+  2. `npx prisma migrate deploy` against the production `DIRECT_URL` (applies the same SQL to Neon).
+  3. Commit the migration and push. Vercel deploys only run `next build`, so the schema on Neon must already match what the new code expects by the time the deploy completes.
+  If you forget step 2, the deploy will succeed but runtime queries against the missing column/table will throw. Test immediately after deploying a schema change.
 - **Update the dashboard when you ship a feature.** `src/app/(app)/dashboard/page.tsx` has a `statForHref` switch that turns the "功能開發中" placeholder into a real one-line stat (count of patients, appointments, etc.). When you finish a feature page, add a case for its href so the dashboard card stops saying it's still under development. New features without a stat default back to the placeholder, so this is required, not optional.

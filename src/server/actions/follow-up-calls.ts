@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { db } from "@/lib/db";
 import { followUpCallInputSchema } from "@/lib/validation/follow-up-call";
+import { callDayForAppointment } from "@/server/queries/reminders";
 import { requireRole } from "@/server/rbac";
 
 export type ActionState = { ok: false; error: string } | { ok: true } | null;
@@ -32,6 +33,7 @@ export async function recordFollowUpCall(
       id: true,
       patientId: true,
       status: true,
+      scheduledAt: true,
       followUpCall: { select: { id: true } },
     },
   });
@@ -103,5 +105,8 @@ export async function recordFollowUpCall(
   revalidatePath("/reminders");
   revalidatePath("/calendar");
   revalidatePath(`/patients/${appointment.patientId}`);
-  redirect("/reminders");
+  // Return the nurse to the same call-day view they were working from,
+  // so a batch of calls flows through the list without losing context.
+  const callDay = callDayForAppointment(appointment.scheduledAt);
+  redirect(`/reminders?date=${callDay}`);
 }

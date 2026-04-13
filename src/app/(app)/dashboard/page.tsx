@@ -9,7 +9,7 @@ import {
 import { CLINIC_NAME } from "@/lib/clinic";
 import { db } from "@/lib/db";
 import { formatDateTW } from "@/lib/date";
-import { countDueReminders } from "@/server/queries/reminders";
+import { countDueRemindersToday } from "@/server/queries/reminders";
 import { requireSession } from "@/server/rbac";
 
 /**
@@ -89,7 +89,7 @@ export default async function DashboardPage() {
         status: { notIn: ["CANCELLED"] },
       },
     }),
-    countDueReminders(),
+    countDueRemindersToday(),
     db.user.count({ where: { active: true } }),
     db.pRPProduct.count({ where: { active: true } }),
     db.doctorCommissionRate.count({ where: { effectiveTo: null } }),
@@ -105,8 +105,8 @@ export default async function DashboardPage() {
           : { kind: "text", text: "尚無未來預約" };
       case "/reminders":
         return dueReminderCount > 0
-          ? { kind: "number", value: dueReminderCount, unit: "位待電訪" }
-          : { kind: "text", text: "全部已電訪 ✓" };
+          ? { kind: "number", value: dueReminderCount, unit: "位今日待電訪" }
+          : { kind: "text", text: "今日無須電訪" };
       case "/admin/users":
         return { kind: "number", value: activeUserCount, unit: "位啟用使用者" };
       case "/admin/products":

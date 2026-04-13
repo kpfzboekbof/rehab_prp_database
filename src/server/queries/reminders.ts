@@ -1,17 +1,25 @@
 import { Prisma } from "@prisma/client";
 
 import { db } from "@/lib/db";
+import {
+  addDaysToTaipeiKey,
+  taipeiDateKey,
+  taipeiDayEnd,
+  taipeiDayStart,
+} from "@/lib/date";
 
 /**
- * Follow-up reminder queries. "Due" = upcoming (or slightly overdue)
- * appointments that have not been called yet; "Completed" = same window
- * but with a call already recorded. Both include enough patient /
- * treatment context for the nurse to make the call intelligently.
+ * Reminder rule: by default, nurses call patients **7 days before** the
+ * scheduled follow-up visit. So "today's reminder list" on call day D is
+ * every appointment whose `scheduledAt` falls on Taipei calendar day
+ * (D + 7 days).
+ *
+ * The page accepts a `?date=YYYY-MM-DD` to override the call day (so the
+ * nurse can preview tomorrow's list or catch up on yesterday's missed
+ * calls) — all the queries in this file take an explicit Taipei date key.
  */
 
-const WINDOW_PAST_DAYS = 3;
-const WINDOW_FUTURE_DAYS = 14;
-const COMPLETED_LOOKBACK_DAYS = 30;
+export const REMINDER_LEAD_DAYS = 7;
 
 const reminderInclude = {
   patient: {
@@ -40,23 +48,44 @@ const reminderInclude = {
   },
 } satisfies Prisma.FollowUpAppointmentInclude;
 
-function windowBounds(pastDays: number, futureDays: number) {
-  const now = new Date();
-  const past = new Date(now.getTime() - pastDays * 24 * 60 * 60 * 1000);
-  const future = new Date(now.getTime() + futureDays * 24 * 60 * 60 * 1000);
-  return { past, future };
+/**
+ * Returns the Taipei date key corresponding to "appointment day" for a
+ * given "call day". E.g. callDay 2026-04-13 → apptDay 2026-04-20.
+ */
+export function appointmentDayForCallDay(callDayKey: string): string {
+  return addDaysToTaipeiKey(callDayKey, REMINDER_LEAD_DAYS);
 }
 
 /**
- * Appointments the nurse still needs to call: within our window, not
- * cancelled, and no `FollowUpCall` row yet.
+ * Inverse: given an appointment's UTC scheduledAt, returns the Taipei
+ * date key of the day it should be called on.
  */
-export async function listDueReminders() {
-  const { past, future } = windowBounds(WINDOW_PAST_DAYS, WINDOW_FUTURE_DAYS);
+export function callDayForAppointment(scheduledAt: Date): string {
+  const apptKey = taipeiDateKey(scheduledAt);
+  return addDaysToTaipeiKey(apptKey, -REMINDER_LEAD_DAYS);
+}
+
+/**
+ * Today's Taipei date key (the default call day for the reminder page).
+ */
+export function todayCallDayKey(): string {
+  return taipeiDateKey(new Date());
+}
+
+/**
+ * Appointments the nurse still needs to call on a given call day.
+ * Filters by appointmentDay = callDay + 7, excluding cancelled and
+ * already-called.
+ */
+export async function listDueRemindersForCallDay(callDayKey: string) {
+  const apptDayKey = appointmentDayForCallDay(callDayKey);
 
   return db.followUpAppointment.findMany({
     where: {
-      scheduledAt: { gte: past, lte: future },
+      scheduledAt: {
+        gte: taipeiDayStart(apptDayKey),
+        lt: taipeiDayEnd(apptDayKey),
+      },
       status: { not: "CANCELLED" },
       followUpCall: { is: null },
     },
@@ -66,41 +95,81 @@ export async function listDueReminders() {
 }
 
 /**
- * Recently-called appointments — for reference and re-editing. Shows
- * the last 30 days of completed calls (regardless of the appointment's
- * own scheduledAt) so the nurse can review their recent work.
+ * Appointments on the same call day that already have a call recorded —
+ * for the nurse to review or edit after completing the initial calls.
  */
-export async function listCompletedReminders() {
-  const cutoff = new Date(
-    Date.now() - COMPLETED_LOOKBACK_DAYS * 24 * 60 * 60 * 1000,
-  );
+export async function listCompletedRemindersForCallDay(callDayKey: string) {
+  const apptDayKey = appointmentDayForCallDay(callDayKey);
 
   return db.followUpAppointment.findMany({
     where: {
-      followUpCall: {
-        is: {
-          calledAt: { gte: cutoff },
-        },
+      scheduledAt: {
+        gte: taipeiDayStart(apptDayKey),
+        lt: taipeiDayEnd(apptDayKey),
       },
+      followUpCall: { isNot: null },
     },
-    orderBy: [{ followUpCall: { calledAt: "desc" } }],
-    take: 50,
+    orderBy: { scheduledAt: "asc" },
     include: reminderInclude,
   });
 }
 
 /**
- * Count of due reminders — used by the dashboard card.
+ * Dashboard-card count: patients needing a reminder call TODAY.
  */
-export async function countDueReminders(): Promise<number> {
-  const { past, future } = windowBounds(WINDOW_PAST_DAYS, WINDOW_FUTURE_DAYS);
+export async function countDueRemindersToday(): Promise<number> {
+  const callDayKey = todayCallDayKey();
+  const apptDayKey = appointmentDayForCallDay(callDayKey);
   return db.followUpAppointment.count({
     where: {
-      scheduledAt: { gte: past, lte: future },
+      scheduledAt: {
+        gte: taipeiDayStart(apptDayKey),
+        lt: taipeiDayEnd(apptDayKey),
+      },
       status: { not: "CANCELLED" },
       followUpCall: { is: null },
     },
   });
+}
+
+/**
+ * Which call days in a given month have at least one pending reminder?
+ * Used by the mini calendar to put a dot under busy days.
+ *
+ * Implementation: query all appointments whose scheduledAt falls in the
+ * "appointment window" shifted by +REMINDER_LEAD_DAYS from the month,
+ * then map each one back to its call day.
+ */
+export async function getBusyCallDaysInMonth(
+  year: number,
+  month: number,
+): Promise<Set<string>> {
+  // First and (exclusive) last call day of the shown month.
+  const firstCallDay = `${year}-${String(month).padStart(2, "0")}-01`;
+  const nextYear = month === 12 ? year + 1 : year;
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const firstCallDayNextMonth = `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`;
+
+  const firstApptDay = appointmentDayForCallDay(firstCallDay);
+  const firstApptDayNextMonth = appointmentDayForCallDay(firstCallDayNextMonth);
+
+  const rows = await db.followUpAppointment.findMany({
+    where: {
+      scheduledAt: {
+        gte: taipeiDayStart(firstApptDay),
+        lt: taipeiDayStart(firstApptDayNextMonth),
+      },
+      status: { not: "CANCELLED" },
+      followUpCall: { is: null },
+    },
+    select: { scheduledAt: true },
+  });
+
+  const busy = new Set<string>();
+  for (const r of rows) {
+    busy.add(callDayForAppointment(r.scheduledAt));
+  }
+  return busy;
 }
 
 /**

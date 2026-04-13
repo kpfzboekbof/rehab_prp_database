@@ -144,6 +144,17 @@ export function ageAt(birthDate: Date | string, referenceDate: Date = new Date()
 }
 
 /**
+ * Shift a Taipei `YYYY-MM-DD` date key by an integer number of days.
+ * Used by the reminder page to convert "call day" ↔ "appointment day"
+ * (call day = appointment day − 7, by default).
+ */
+export function addDaysToTaipeiKey(key: string, days: number): string {
+  const start = taipeiDayStart(key);
+  const after = new Date(start.getTime() + days * 24 * 60 * 60 * 1000);
+  return taipeiDateKey(after);
+}
+
+/**
  * Synthesise a `birthDate` from an age integer. Returns a Date that is
  * exactly `age` years before today (in Taipei time). This is the inverse
  * of `ageAt()` — i.e. `ageAt(dateFromAge(n))` is always `n` on the day

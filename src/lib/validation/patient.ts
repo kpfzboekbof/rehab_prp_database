@@ -6,6 +6,12 @@ import { Gender } from "@prisma/client";
  * client form (via `useActionState` error display) and server actions
  * (via `safeParse`). Keep all validation rules here so there's a single
  * source of truth for allowable input.
+ *
+ * Note: the form asks for `age` (integer), not birth date. The server
+ * action synthesises a `birthDate` by subtracting the age from today,
+ * so the stored `Patient.birthDate` column and the `ageAt()` display
+ * helper continue to work unchanged. Ages drift at most ±1 year from
+ * reality, which is fine for clinical segmentation.
  */
 export const patientInputSchema = z.object({
   chartNumber: z
@@ -17,9 +23,11 @@ export const patientInputSchema = z.object({
   gender: z.nativeEnum(Gender, {
     errorMap: () => ({ message: "請選擇性別" }),
   }),
-  birthDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "生日格式需為 YYYY-MM-DD"),
+  age: z.coerce
+    .number({ invalid_type_error: "請輸入年齡" })
+    .int("年齡需為整數")
+    .min(0, "年齡不可為負")
+    .max(120, "年齡超出合理範圍"),
   phone: z
     .string()
     .trim()
@@ -41,3 +49,4 @@ export const patientInputSchema = z.object({
 });
 
 export type PatientInput = z.infer<typeof patientInputSchema>;
+

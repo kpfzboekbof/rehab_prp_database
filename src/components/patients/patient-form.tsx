@@ -14,7 +14,7 @@ export interface PatientFormDefaults {
   chartNumber?: string;
   name?: string;
   gender?: Gender;
-  birthDate?: string; // YYYY-MM-DD
+  age?: number;
   phone?: string;
   address?: string;
   notes?: string;
@@ -100,16 +100,23 @@ export function PatientForm({
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="birthDate">
-            生日 <span className="text-red-600">*</span>
+          <Label htmlFor="age">
+            年齡 <span className="text-red-600">*</span>
           </Label>
           <Input
-            id="birthDate"
-            name="birthDate"
-            type="date"
+            id="age"
+            name="age"
+            type="number"
+            min={0}
+            max={120}
+            step={1}
             required
-            defaultValue={defaults?.birthDate ?? ""}
+            defaultValue={defaults?.age ?? ""}
+            placeholder="例如 65"
           />
+          <p className="text-xs text-neutral-500">
+            以「歲」為單位。系統會自動每年遞增。
+          </p>
         </div>
 
         <div className="flex flex-col gap-2">

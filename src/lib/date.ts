@@ -142,3 +142,18 @@ export function ageAt(birthDate: Date | string, referenceDate: Date = new Date()
   }
   return age;
 }
+
+/**
+ * Synthesise a `birthDate` from an age integer. Returns a Date that is
+ * exactly `age` years before today (in Taipei time). This is the inverse
+ * of `ageAt()` — i.e. `ageAt(dateFromAge(n))` is always `n` on the day
+ * of registration. Used by the patient create/update flow where we only
+ * ask for age to keep the form simple.
+ */
+export function dateFromAge(age: number): Date {
+  const today = new Date();
+  const taipeiToday = taipeiDateKey(today); // YYYY-MM-DD
+  const [y, m, d] = taipeiToday.split("-").map(Number);
+  // Use Taipei midnight of (today - age years) as the synthetic birthdate.
+  return new Date(Date.UTC(y - age, m - 1, d, -8, 0, 0, 0));
+}

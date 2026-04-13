@@ -115,10 +115,6 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
               <dd className="mt-1 font-medium">{ageAt(patient.birthDate)} 歲</dd>
             </div>
             <div>
-              <dt className="text-neutral-500">生日</dt>
-              <dd className="mt-1 font-medium">{formatDateTW(patient.birthDate)}</dd>
-            </div>
-            <div>
               <dt className="text-neutral-500">電話</dt>
               <dd className="mt-1 font-medium">{patient.phone || "—"}</dd>
             </div>

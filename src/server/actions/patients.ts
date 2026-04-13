@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { Prisma } from "@prisma/client";
 
 import { db } from "@/lib/db";
-import { taipeiDayStart } from "@/lib/date";
+import { dateFromAge } from "@/lib/date";
 import { patientInputSchema } from "@/lib/validation/patient";
 import { requireRole } from "@/server/rbac";
 
@@ -23,7 +23,7 @@ function readInput(formData: FormData) {
     chartNumber: formData.get("chartNumber")?.toString() ?? "",
     name: formData.get("name")?.toString() ?? "",
     gender: formData.get("gender")?.toString() ?? "",
-    birthDate: formData.get("birthDate")?.toString() ?? "",
+    age: formData.get("age")?.toString() ?? "",
     phone: formData.get("phone")?.toString() ?? "",
     address: formData.get("address")?.toString() ?? "",
     notes: formData.get("notes")?.toString() ?? "",
@@ -49,7 +49,7 @@ export async function createPatient(
         chartNumber: data.chartNumber,
         name: data.name,
         gender: data.gender,
-        birthDate: taipeiDayStart(data.birthDate),
+        birthDate: dateFromAge(data.age),
         phone: data.phone ? data.phone : null,
         address: data.address ? data.address : null,
         notes: data.notes ? data.notes : null,
@@ -98,7 +98,7 @@ export async function updatePatient(
         chartNumber: data.chartNumber,
         name: data.name,
         gender: data.gender,
-        birthDate: taipeiDayStart(data.birthDate),
+        birthDate: dateFromAge(data.age),
         phone: data.phone ? data.phone : null,
         address: data.address ? data.address : null,
         notes: data.notes ? data.notes : null,

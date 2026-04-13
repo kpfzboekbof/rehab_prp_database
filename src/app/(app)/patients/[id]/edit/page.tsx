@@ -9,21 +9,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { PatientForm } from "@/components/patients/patient-form";
+import { ageAt } from "@/lib/date";
 import { updatePatient } from "@/server/actions/patients";
 import { getPatient } from "@/server/queries/patients";
 
 interface EditPatientPageProps {
   params: Promise<{ id: string }>;
-}
-
-// Extract YYYY-MM-DD from a Date using Taipei time, matching the input[type=date] value format.
-function toDateInput(d: Date): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Taipei",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(d);
 }
 
 export default async function EditPatientPage({ params }: EditPatientPageProps) {
@@ -68,7 +59,7 @@ export default async function EditPatientPage({ params }: EditPatientPageProps) 
               chartNumber: patient.chartNumber,
               name: patient.name,
               gender: patient.gender,
-              birthDate: toDateInput(patient.birthDate),
+              age: ageAt(patient.birthDate),
               phone: patient.phone ?? "",
               address: patient.address ?? "",
               notes: patient.notes ?? "",

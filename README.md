@@ -1,6 +1,8 @@
-# 龜山康澤PRP管理系統
+# PRP 病人管理系統
 
-龜山康澤復健科自費 PRP 病人追蹤與管理系統。
+復健科自費 PRP 病人追蹤與管理系統。Next.js 16 / Prisma / PostgreSQL，可部署到 Vercel + Neon 或自架 Docker。
+
+> **品牌化**：要在部署的網站顯示自家診所名稱，設定環境變數 `NEXT_PUBLIC_CLINIC_NAME`（與選用的 `NEXT_PUBLIC_CLINIC_DESCRIPTION`）即可，不必改 source code。預設值是 generic 的「PRP 病人管理系統」。
 
 ## 技術棧
 

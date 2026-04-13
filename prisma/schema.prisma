@@ -1,4 +1,4 @@
-// 龜山康澤PRP管理系統 — Prisma schema
+// PRP 病人管理系統 — Prisma schema
 //
 // Design notes:
 // - SQLite for zero-ops single-clinic deployment.

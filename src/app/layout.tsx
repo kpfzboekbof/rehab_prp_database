@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+
+import { CLINIC_DESCRIPTION, CLINIC_NAME } from "@/lib/clinic";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "龜山康澤PRP管理系統",
-  description: "龜山康澤復健科 自費 PRP 病人追蹤與管理系統",
+  title: CLINIC_NAME,
+  description: CLINIC_DESCRIPTION,
 };
 
 export default function RootLayout({

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CLINIC_NAME } from "@/lib/clinic";
 
 interface LoginPageProps {
   searchParams: Promise<{ from?: string; error?: string }>;
@@ -48,7 +49,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>登入</CardTitle>
-          <CardDescription>龜山康澤PRP管理系統</CardDescription>
+          <CardDescription>{CLINIC_NAME}</CardDescription>
         </CardHeader>
         <CardContent>
           <form action={login} className="flex flex-col gap-4">

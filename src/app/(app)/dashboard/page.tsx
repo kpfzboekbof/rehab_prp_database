@@ -6,6 +6,7 @@ import {
   NAV_ITEMS,
   type NavCategory,
 } from "@/components/layout/nav-items";
+import { CLINIC_NAME } from "@/lib/clinic";
 import { db } from "@/lib/db";
 import { formatDateTW } from "@/lib/date";
 import { requireSession } from "@/server/rbac";
@@ -138,7 +139,7 @@ export default async function DashboardPage() {
           歡迎回來，<span className="font-medium">{userName}</span>
         </h1>
         <p className="text-sm text-neutral-500">
-          龜山康澤 PRP 管理系統 · {ROLE_LABELS[role]}
+          {CLINIC_NAME} · {ROLE_LABELS[role]}
         </p>
       </header>
 

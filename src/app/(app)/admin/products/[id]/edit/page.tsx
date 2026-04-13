@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { DeleteProductButton } from "@/components/products/delete-product-button";
 import { ProductForm } from "@/components/products/product-form";
 import { ToggleActiveButton } from "@/components/products/toggle-active-button";
 import { updateProduct } from "@/server/actions/products";
@@ -85,6 +86,23 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
               usageCount={usageCount}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-red-200">
+        <CardHeader>
+          <CardTitle className="text-red-700">刪除品項</CardTitle>
+          <CardDescription>
+            永久刪除此品項。只能刪除尚未被任何治療紀錄使用過的品項；已有紀錄的品項請改用上方的「停用」功能。
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DeleteProductButton
+            id={product.id}
+            name={product.name}
+            canDelete={usageCount === 0}
+            usageCount={usageCount}
+          />
         </CardContent>
       </Card>
     </div>

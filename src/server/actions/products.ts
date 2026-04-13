@@ -94,9 +94,6 @@ export async function updateProduct(
  * Flip the `active` flag on a product. Called from a simple button form
  * on the edit page — no useActionState, just a server action bound to
  * the button.
- *
- * We NEVER hard-delete products because TreatmentRecord has a foreign
- * key and we need price history to remain readable forever.
  */
 export async function toggleProductActive(id: string): Promise<void> {
   await requireRole(["ADMIN"]);
@@ -114,4 +111,51 @@ export async function toggleProductActive(id: string): Promise<void> {
 
   revalidatePath("/admin/products");
   revalidatePath(`/admin/products/${id}/edit`);
+}
+
+/**
+ * Hard-delete a product — only allowed if the product has NEVER been
+ * used in a treatment record. If any treatment references this product
+ * we refuse and tell the caller to deactivate instead; deleting would
+ * either violate the FK constraint or (worse, if we cascade) destroy
+ * historical revenue records that need to be retained.
+ */
+export async function deleteProduct(id: string): Promise<ActionState> {
+  await requireRole(["ADMIN"]);
+
+  const existing = await db.pRPProduct.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      name: true,
+      _count: { select: { treatments: true } },
+    },
+  });
+  if (!existing) {
+    return { ok: false, error: "找不到品項" };
+  }
+
+  if (existing._count.treatments > 0) {
+    return {
+      ok: false,
+      error: `此品項已被 ${existing._count.treatments} 筆治療紀錄使用，無法刪除。請改用「停用」以避免新建紀錄時選到此品項。`,
+    };
+  }
+
+  try {
+    await db.pRPProduct.delete({ where: { id } });
+  } catch (err) {
+    // Defensive: if a race condition created a treatment between our
+    // count check and the delete, Prisma will throw a FK error (P2003).
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2003") {
+      return {
+        ok: false,
+        error: "此品項剛剛被用於新的治療紀錄，無法刪除。請改用「停用」。",
+      };
+    }
+    throw err;
+  }
+
+  revalidatePath("/admin/products");
+  redirect("/admin/products");
 }

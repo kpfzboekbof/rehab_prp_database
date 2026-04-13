@@ -38,6 +38,7 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
 
   const treatments = await listTreatmentsByPatient(patient.id);
 
+  const canEdit = session.user.role === "DOCTOR" || session.user.role === "ADMIN";
   const canDelete = session.user.role === "DOCTOR" || session.user.role === "ADMIN";
   const canAddTreatment =
     session.user.role === "DOCTOR" || session.user.role === "ADMIN";
@@ -62,9 +63,11 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
           </p>
         </div>
         <div className="flex gap-2">
-          <Button asChild variant="outline">
-            <Link href={`/patients/${patient.id}/edit`}>編輯</Link>
-          </Button>
+          {canEdit && (
+            <Button asChild variant="outline">
+              <Link href={`/patients/${patient.id}/edit`}>編輯</Link>
+            </Button>
+          )}
           {canDelete && (
             <DeletePatientButton id={patient.id} name={patient.name} />
           )}

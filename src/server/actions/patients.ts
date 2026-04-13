@@ -34,7 +34,7 @@ export async function createPatient(
   _prevState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const session = await requireRole(["DOCTOR", "STAFF", "ADMIN"]);
+  const session = await requireRole(["DOCTOR", "ADMIN"]);
 
   const parsed = patientInputSchema.safeParse(readInput(formData));
   if (!parsed.success) {
@@ -75,7 +75,7 @@ export async function updatePatient(
   _prevState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  await requireRole(["DOCTOR", "STAFF", "ADMIN"]);
+  await requireRole(["DOCTOR", "ADMIN"]);
 
   const parsed = patientInputSchema.safeParse(readInput(formData));
   if (!parsed.success) {

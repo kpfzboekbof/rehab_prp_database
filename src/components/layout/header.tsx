@@ -13,8 +13,8 @@ interface HeaderProps {
 
 const ROLE_LABELS: Record<Role, string> = {
   DOCTOR: "醫師",
-  STAFF: "診所員工",
-  ADMIN: "系統管理員",
+  STAFF: "護理師",
+  ADMIN: "管理者 / 醫師",
 };
 
 export function Header({ userName, role, onToggleSidebar }: HeaderProps) {

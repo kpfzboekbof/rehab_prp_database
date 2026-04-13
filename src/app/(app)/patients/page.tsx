@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PatientTable } from "@/components/patients/patient-table";
 import { listPatients } from "@/server/queries/patients";
+import { requireSession } from "@/server/rbac";
 
 interface PatientsPageProps {
   searchParams: Promise<{ q?: string; page?: string }>;
 }
 
 export default async function PatientsPage({ searchParams }: PatientsPageProps) {
+  const session = await requireSession();
   const { q = "", page: pageParam = "1" } = await searchParams;
   const page = Math.max(1, Number.parseInt(pageParam, 10) || 1);
 
@@ -17,6 +19,7 @@ export default async function PatientsPage({ searchParams }: PatientsPageProps) 
 
   const rangeStart = total === 0 ? 0 : (page - 1) * perPage + 1;
   const rangeEnd = Math.min(total, page * perPage);
+  const canCreate = session.user.role === "DOCTOR" || session.user.role === "ADMIN";
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -28,9 +31,11 @@ export default async function PatientsPage({ searchParams }: PatientsPageProps) 
             {total > 0 && ` · 顯示 ${rangeStart}–${rangeEnd}`}
           </p>
         </div>
-        <Button asChild>
-          <Link href="/patients/new">新增病人</Link>
-        </Button>
+        {canCreate && (
+          <Button asChild>
+            <Link href="/patients/new">新增病人</Link>
+          </Button>
+        )}
       </div>
 
       <form action="/patients" method="get" className="flex gap-2">

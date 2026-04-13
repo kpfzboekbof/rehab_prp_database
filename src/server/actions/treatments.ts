@@ -54,7 +54,6 @@ function readInput(formData: FormData) {
     bodyPartDetail: formData.get("bodyPartDetail")?.toString() ?? "",
     symptoms: formData.get("symptoms")?.toString() ?? "",
     painBefore: formData.get("painBefore")?.toString() ?? "",
-    painImmediateAfter: formData.get("painImmediateAfter")?.toString() ?? "",
     productId: formData.get("productId")?.toString() ?? "",
     vialsUsed: formData.get("vialsUsed")?.toString() ?? "",
     packageMode: (formData.get("packageMode")?.toString() || undefined) as
@@ -225,12 +224,9 @@ export async function createTreatment(
         treatmentDate,
         bodyPart: data.bodyPart,
         bodyPartDetail: data.bodyPartDetail ? data.bodyPartDetail : null,
-        symptoms: data.symptoms,
+        symptoms: data.symptoms ? data.symptoms : "",
         painBefore: data.painBefore,
-        painImmediateAfter:
-          data.painImmediateAfter === "" || data.painImmediateAfter === undefined
-            ? null
-            : Number(data.painImmediateAfter),
+        painImmediateAfter: null,
         ultrasoundNote: data.ultrasoundNote ? data.ultrasoundNote : null,
         physicianNote: data.physicianNote ? data.physicianNote : null,
         productId: data.productId,
@@ -323,12 +319,10 @@ export async function updateTreatment(
         treatmentDate,
         bodyPart: data.bodyPart,
         bodyPartDetail: data.bodyPartDetail ? data.bodyPartDetail : null,
-        symptoms: data.symptoms,
+        symptoms: data.symptoms ? data.symptoms : "",
         painBefore: data.painBefore,
-        painImmediateAfter:
-          data.painImmediateAfter === "" || data.painImmediateAfter === undefined
-            ? null
-            : Number(data.painImmediateAfter),
+        // painImmediateAfter intentionally not updated — field removed from form;
+        // leave existing values alone.
         ultrasoundNote: data.ultrasoundNote ? data.ultrasoundNote : null,
         physicianNote: data.physicianNote ? data.physicianNote : null,
         productId: data.productId,

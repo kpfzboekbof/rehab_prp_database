@@ -13,7 +13,6 @@ interface TreatmentRow {
   vialsUsed: number;
   totalAmount: number;
   painBefore: number;
-  painImmediateAfter: number | null;
   product: { name: string; packageSize: number | null };
 }
 
@@ -41,7 +40,7 @@ export function TreatmentTable({ patientId, rows }: TreatmentTableProps) {
             <th className="px-4 py-3 font-medium">品項</th>
             <th className="px-4 py-3 text-right font-medium">本次注射</th>
             <th className="px-4 py-3 text-right font-medium">金額</th>
-            <th className="px-4 py-3 font-medium">疼痛（前→後）</th>
+            <th className="px-4 py-3 font-medium">治療前疼痛</th>
             <th className="px-4 py-3 font-medium"></th>
           </tr>
         </thead>
@@ -84,10 +83,7 @@ export function TreatmentTable({ patientId, rows }: TreatmentTableProps) {
                 <td className="px-4 py-3 text-right font-medium text-neutral-900">
                   {t.totalAmount > 0 ? formatTWD(t.totalAmount) : "—"}
                 </td>
-                <td className="px-4 py-3 text-neutral-700">
-                  {t.painBefore}
-                  {t.painImmediateAfter !== null && ` → ${t.painImmediateAfter}`}
-                </td>
+                <td className="px-4 py-3 text-neutral-700">{t.painBefore} / 10</td>
                 <td className="px-4 py-3 text-right">
                   <Link
                     href={`/patients/${patientId}/treatments/${t.id}`}

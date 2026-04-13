@@ -98,19 +98,13 @@ export default async function TreatmentDetailPage({ params }: TreatmentDetailPag
             </div>
             <div className="sm:col-span-2">
               <dt className="text-neutral-500">症狀 / 主訴</dt>
-              <dd className="mt-1 whitespace-pre-wrap font-medium">{treatment.symptoms}</dd>
+              <dd className="mt-1 whitespace-pre-wrap font-medium">
+                {treatment.symptoms || "—"}
+              </dd>
             </div>
             <div>
               <dt className="text-neutral-500">治療前疼痛</dt>
               <dd className="mt-1 font-medium">{treatment.painBefore} / 10</dd>
-            </div>
-            <div>
-              <dt className="text-neutral-500">治療當天治療後疼痛</dt>
-              <dd className="mt-1 font-medium">
-                {treatment.painImmediateAfter !== null
-                  ? `${treatment.painImmediateAfter} / 10`
-                  : "—"}
-              </dd>
             </div>
             <div className="sm:col-span-2">
               <dt className="text-neutral-500">超音波導引註記</dt>

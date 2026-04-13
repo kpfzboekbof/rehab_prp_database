@@ -31,19 +31,14 @@ export const treatmentInputSchema = z.object({
   symptoms: z
     .string()
     .trim()
-    .min(1, "請輸入症狀")
-    .max(2000, "症狀描述過長"),
+    .max(2000, "症狀描述過長")
+    .optional()
+    .or(z.literal("")),
   painBefore: z.coerce
     .number()
     .int("疼痛分數需為整數")
     .min(0, "疼痛分數介於 0 到 10")
     .max(10, "疼痛分數介於 0 到 10"),
-  painImmediateAfter: z
-    .union([
-      z.literal(""),
-      z.coerce.number().int().min(0).max(10),
-    ])
-    .optional(),
   productId: z.string().trim().min(1, "請選擇 PRP 品項"),
   vialsUsed: z.coerce
     .number()

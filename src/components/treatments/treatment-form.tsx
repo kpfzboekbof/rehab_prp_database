@@ -37,7 +37,6 @@ export interface TreatmentFormDefaults {
   bodyPartDetail?: string;
   symptoms?: string;
   painBefore?: number;
-  painImmediateAfter?: number | null;
   productId?: string;
   vialsUsed?: number;
   /** When editing an existing treatment, fix the package mode to its current value. */
@@ -203,17 +202,14 @@ export function TreatmentForm({
         </div>
 
         <div className="flex flex-col gap-2 sm:col-span-2">
-          <Label htmlFor="symptoms">
-            症狀 <span className="text-red-600">*</span>
-          </Label>
+          <Label htmlFor="symptoms">症狀</Label>
           <Textarea
             id="symptoms"
             name="symptoms"
-            required
             rows={3}
             maxLength={2000}
             defaultValue={defaults?.symptoms ?? ""}
-            placeholder="主訴、病史、臨床發現"
+            placeholder="主訴、病史、臨床發現（選填）"
           />
         </div>
 
@@ -230,20 +226,6 @@ export function TreatmentForm({
             step={1}
             required
             defaultValue={defaults?.painBefore ?? ""}
-          />
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="painImmediateAfter">治療當天治療後疼痛 (0–10)</Label>
-          <Input
-            id="painImmediateAfter"
-            name="painImmediateAfter"
-            type="number"
-            min={0}
-            max={10}
-            step={1}
-            defaultValue={defaults?.painImmediateAfter ?? ""}
-            placeholder="可留空，後續追蹤再填"
           />
         </div>
 

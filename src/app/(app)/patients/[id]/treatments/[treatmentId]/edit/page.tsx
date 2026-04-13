@@ -131,7 +131,6 @@ export default async function EditTreatmentPage({ params }: EditTreatmentPagePro
               bodyPartDetail: treatment.bodyPartDetail ?? "",
               symptoms: treatment.symptoms,
               painBefore: treatment.painBefore,
-              painImmediateAfter: treatment.painImmediateAfter,
               productId: treatment.product.id,
               vialsUsed: treatment.vialsUsed,
               packageMode: lockedMode,

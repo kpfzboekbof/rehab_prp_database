@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import { computeCommission } from "@/lib/commission";
 import { taipeiDayStart } from "@/lib/date";
 import { treatmentInputSchema } from "@/lib/validation/treatment";
-import { getEffectiveCommissionRate } from "@/server/queries/treatments";
+import { getEffectiveCommissionRate } from "@/server/queries/commission";
 import { requireRole } from "@/server/rbac";
 
 /**

@@ -10,10 +10,8 @@ import {
 } from "@/components/ui/card";
 import { TreatmentForm } from "@/components/treatments/treatment-form";
 import { updateTreatment } from "@/server/actions/treatments";
-import {
-  getTreatment,
-  listActiveProducts,
-} from "@/server/queries/treatments";
+import { listActiveProducts } from "@/server/queries/products";
+import { getTreatment } from "@/server/queries/treatments";
 import { requireRole } from "@/server/rbac";
 
 interface EditTreatmentPageProps {

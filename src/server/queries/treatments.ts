@@ -23,18 +23,6 @@ export async function getTreatment(id: string) {
 }
 
 /**
- * Active PRP products for the treatment form dropdown. Inactive products are
- * hidden from new entries but still referenced by existing records.
- */
-export async function listActiveProducts() {
-  return db.pRPProduct.findMany({
-    where: { active: true },
-    orderBy: { name: "asc" },
-    select: { id: true, name: true, unitPrice: true },
-  });
-}
-
-/**
  * Look up the commission rate that was active for a given doctor on a given
  * treatment date. Returns 0 (with a `found: false` flag) if no rate is
  * configured — the caller can then decide whether to block the insert or

@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { TreatmentForm } from "@/components/treatments/treatment-form";
 import { createTreatment } from "@/server/actions/treatments";
-import { listActiveProducts } from "@/server/queries/treatments";
+import { listActiveProducts } from "@/server/queries/products";
 import { getPatient } from "@/server/queries/patients";
 import { requireRole } from "@/server/rbac";
 

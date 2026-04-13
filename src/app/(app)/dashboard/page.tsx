@@ -125,7 +125,7 @@ export default async function DashboardPage() {
   const userName = session.user.name || session.user.email || "";
 
   return (
-    <div className="mx-auto max-w-5xl space-y-12">
+    <div className="mx-auto max-w-5xl space-y-16">
       {/* Greeting block */}
       <header className="space-y-2">
         <div className="text-xs uppercase tracking-[0.25em] text-neutral-400">
@@ -146,15 +146,14 @@ export default async function DashboardPage() {
         const style = CATEGORY_STYLES[category];
 
         return (
-          <section key={category} className="space-y-5">
-            <div className="flex items-center gap-5">
-              <div className={`h-px flex-1 ${style.line}`} />
+          <section key={category} className="space-y-6">
+            <div>
               <h2
-                className={`px-2 text-sm font-medium tracking-[0.35em] ${style.accent}`}
+                className={`text-4xl font-light tracking-wide sm:text-5xl ${style.accent}`}
               >
                 {style.label}
               </h2>
-              <div className={`h-px flex-1 ${style.line}`} />
+              <div className={`mt-3 h-0.5 w-24 ${style.line}`} />
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -190,6 +190,12 @@ export default async function DashboardPage() {
         return isDoctor
           ? { kind: "currency", value: monthCommission, unit: "本月抽成" }
           : { kind: "currency", value: monthRevenue, unit: "本月收入" };
+      case "/reports/insights/retention":
+        return { kind: "text", text: "終身價值 / 回購率" };
+      case "/reports/insights/sessions":
+        return { kind: "text", text: "早 / 午 / 晚診分布" };
+      case "/reports/insights/funnel":
+        return { kind: "text", text: "新客戶轉化漏斗" };
       case "/research":
         return totalTreatmentRecords > 0
           ? {

@@ -33,6 +33,9 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/outreach/no-show", label: "爽約未補約", category: "outreach" },
 
   { href: "/reports/monthly", label: "月業績報表", category: "business", roles: ["DOCTOR", "ADMIN"] },
+  { href: "/reports/insights/retention", label: "回購分析", category: "business", roles: ["DOCTOR", "ADMIN"] },
+  { href: "/reports/insights/sessions", label: "診次使用率", category: "business", roles: ["DOCTOR", "ADMIN"] },
+  { href: "/reports/insights/funnel", label: "新客轉化漏斗", category: "business", roles: ["DOCTOR", "ADMIN"] },
   { href: "/research", label: "研究資料庫", category: "business", roles: ["DOCTOR", "ADMIN"] },
 
   { href: "/admin/users", label: "使用者管理", category: "admin", roles: ["ADMIN"] },

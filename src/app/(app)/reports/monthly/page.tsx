@@ -8,8 +8,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { MonthlyTrendChart } from "@/components/reports/monthly-trend-chart";
 import { formatTWD } from "@/lib/currency";
 import { taipeiDateKey } from "@/lib/date";
+import { getMonthlyTrend } from "@/server/queries/insights";
 import { getMonthlyReport } from "@/server/queries/reports";
 import { requireRole } from "@/server/rbac";
 
@@ -37,11 +39,17 @@ export default async function MonthlyReportPage({
   const month = rawMonth >= 1 && rawMonth <= 12 ? rawMonth : todayMonth;
 
   const isDoctor = session.user.role === "DOCTOR";
-  const report = await getMonthlyReport({
-    year,
-    month,
-    doctorId: isDoctor ? session.user.id : undefined,
-  });
+  const [report, trend] = await Promise.all([
+    getMonthlyReport({
+      year,
+      month,
+      doctorId: isDoctor ? session.user.id : undefined,
+    }),
+    getMonthlyTrend({
+      monthsBack: 12,
+      doctorId: isDoctor ? session.user.id : undefined,
+    }),
+  ]);
 
   const prevYear = month === 1 ? year - 1 : year;
   const prevMonth = month === 1 ? 12 : month - 1;
@@ -123,6 +131,27 @@ export default async function MonthlyReportPage({
           accent
         />
       </div>
+
+      {/* 12-month trend */}
+      <Card>
+        <CardHeader>
+          <CardTitle>近 12 個月趨勢</CardTitle>
+          <CardDescription>
+            收入（柱）+ 不同病人數與新病人數（線）。滑鼠移到圖表上可以看單月數字。
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <MonthlyTrendChart
+            data={trend.map((p) => ({
+              month: p.month,
+              grossRevenue: p.grossRevenue,
+              treatmentCount: p.treatmentCount,
+              distinctPatientCount: p.distinctPatientCount,
+              newPatientCount: p.newPatientCount,
+            }))}
+          />
+        </CardContent>
+      </Card>
 
       {/* Per-doctor */}
       {!isDoctor && (

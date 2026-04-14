@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { db } from "@/lib/db";
@@ -247,6 +247,12 @@ export async function createTreatment(
 
   revalidatePath(`/patients/${patientId}`);
   revalidatePath("/dashboard");
+  // Bust the cached aggregates so the new treatment shows up immediately
+  // on the monthly report and the analytics insights instead of waiting
+  // for the 5-min TTL. `updateTag` is the Next.js 16 server-action
+  // primitive for "read-your-own-writes" cache invalidation.
+  updateTag("monthly-report");
+  updateTag("monthly-trend");
   redirect(`/patients/${patientId}/treatments/${createdId}`);
 }
 
@@ -341,5 +347,8 @@ export async function updateTreatment(
 
   revalidatePath(`/patients/${patientId}`);
   revalidatePath(`/patients/${patientId}/treatments/${treatmentId}`);
+  // Bust report aggregates so edits to amounts/dates show up immediately.
+  updateTag("monthly-report");
+  updateTag("monthly-trend");
   redirect(`/patients/${patientId}/treatments/${treatmentId}`);
 }

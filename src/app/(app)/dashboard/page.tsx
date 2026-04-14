@@ -10,6 +10,7 @@ import { CLINIC_NAME } from "@/lib/clinic";
 import { formatTWD } from "@/lib/currency";
 import { db } from "@/lib/db";
 import { formatDateTW, taipeiDayStart } from "@/lib/date";
+import { countOutreachLists } from "@/server/queries/outreach";
 import { countDueRemindersToday } from "@/server/queries/reminders";
 import { requireSession } from "@/server/rbac";
 
@@ -46,6 +47,12 @@ const CATEGORY_STYLES: Record<
     border: "border-l-[#1D697C]",
     line: "bg-[#1D697C]/30",
   },
+  outreach: {
+    label: "行銷行動",
+    accent: "text-[#ED6D3D]",
+    border: "border-l-[#ED6D3D]",
+    line: "bg-[#ED6D3D]/30",
+  },
   business: {
     label: "業務管理",
     accent: "text-[#6A5BA3]",
@@ -60,7 +67,7 @@ const CATEGORY_STYLES: Record<
   },
 };
 
-const SECTION_ORDER: NavCategory[] = ["clinical", "business", "admin"];
+const SECTION_ORDER: NavCategory[] = ["clinical", "outreach", "business", "admin"];
 
 type Stat =
   | { kind: "number"; value: number; unit: string }
@@ -104,6 +111,7 @@ export default async function DashboardPage() {
     doctorsWithCommissionCount,
     monthRevenueAgg,
     totalTreatmentRecords,
+    outreachCounts,
   ] = await Promise.all([
     db.patient.count({ where: { deletedAt: null } }),
     db.followUpAppointment.count({
@@ -124,6 +132,7 @@ export default async function DashboardPage() {
       _sum: { totalAmount: true, commissionAmount: true },
     }),
     db.treatmentRecord.count(),
+    countOutreachLists(),
   ]);
   const monthRevenue = monthRevenueAgg._sum.totalAmount ?? 0;
   const monthCommission = monthRevenueAgg._sum.commissionAmount ?? 0;
@@ -140,6 +149,30 @@ export default async function DashboardPage() {
         return dueReminderCount > 0
           ? { kind: "number", value: dueReminderCount, unit: "位今日待電訪" }
           : { kind: "text", text: "今日無須電訪" };
+      case "/outreach/dormant":
+        return outreachCounts.dormant > 0
+          ? {
+              kind: "number",
+              value: outreachCounts.dormant,
+              unit: "位沉睡病人待聯絡",
+            }
+          : { kind: "text", text: "目前沒有沉睡病人" };
+      case "/outreach/package-finished":
+        return outreachCounts.packageFinished > 0
+          ? {
+              kind: "number",
+              value: outreachCounts.packageFinished,
+              unit: "位套組用完待續購",
+            }
+          : { kind: "text", text: "目前沒有套組用完的病人" };
+      case "/outreach/no-show":
+        return outreachCounts.noShow > 0
+          ? {
+              kind: "number",
+              value: outreachCounts.noShow,
+              unit: "位爽約未補約待聯絡",
+            }
+          : { kind: "text", text: "目前沒有爽約未補約的病人" };
       case "/admin/users":
         return { kind: "number", value: activeUserCount, unit: "位啟用使用者" };
       case "/admin/products":

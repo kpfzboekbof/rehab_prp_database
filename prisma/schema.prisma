@@ -46,7 +46,8 @@ model User {
   createdPatients Patient[]              @relation("PatientCreatedBy")
   treatments      TreatmentRecord[]      @relation("TreatmentDoctor")
   authoredCalls   FollowUpCall[]         @relation("CallAuthor")
-  commissionRates DoctorCommissionRate[]
+  commissionRates   DoctorCommissionRate[]
+  outreachContacts  OutreachContact[]      @relation("OutreachContactedBy")
 
   // Auth.js adapter tables (kept for future OAuth; credentials provider uses JWT sessions)
   accounts Account[]
@@ -129,6 +130,18 @@ enum AppointmentSession {
   EVENING
 }
 
+/// Reason tag for an outreach / marketing contact event. Each list on
+/// the /outreach page corresponds to one of these reasons, and a
+/// contact record is tagged with the reason so the same patient can
+/// be logged once per campaign without the records colliding.
+enum OutreachReason {
+  DORMANT            // 沉睡病人：很久沒治療
+  PACKAGE_FINISHED   // 套組用完未續購
+  NO_SHOW            // 爽約未補約
+  INCOMPLETE_PACKAGE // 套組還沒用完但停擺（預留給未來）
+  OTHER              // 其他
+}
+
 // ---------- Domain tables ----------
 
 model Patient {
@@ -148,8 +161,9 @@ model Patient {
   createdById String
   createdBy   User   @relation("PatientCreatedBy", fields: [createdById], references: [id])
 
-  treatments   TreatmentRecord[]
-  appointments FollowUpAppointment[]
+  treatments       TreatmentRecord[]
+  appointments     FollowUpAppointment[]
+  outreachContacts OutreachContact[]
 
   @@index([name])
   @@index([deletedAt])
@@ -278,4 +292,26 @@ model DoctorCommissionRate {
   updatedAt DateTime @updatedAt
 
   @@index([doctorId, effectiveFrom])
+}
+
+/// Record of an outreach / marketing contact event. One row per
+/// (patient, reason, contact attempt). Used by the /outreach lists to
+/// mark patients as "already called for this campaign" so they don't
+/// keep showing up on top. Distinct from `FollowUpCall`, which is a
+/// clinical reminder call tied to a specific appointment.
+model OutreachContact {
+  id            String         @id @default(cuid())
+  patientId     String
+  patient       Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  reason        OutreachReason
+  contactedAt   DateTime       @default(now())
+  contactedById String
+  contactedBy   User           @relation("OutreachContactedBy", fields: [contactedById], references: [id])
+  outcome       String? // short free-text: 已預約 / 考慮中 / 拒絕 / 電話不通 …
+  notes         String?
+
+  createdAt DateTime @default(now())
+
+  @@index([patientId, reason, contactedAt])
+  @@index([reason, contactedAt])
 }

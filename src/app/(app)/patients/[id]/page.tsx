@@ -15,14 +15,11 @@ import { PackageBalanceCard } from "@/components/treatments/package-balance-card
 import { TreatmentTable } from "@/components/treatments/treatment-table";
 import { APPOINTMENT_SESSION_LABELS } from "@/lib/appointment-session";
 import { formatTWD } from "@/lib/currency";
-import { ageAt, formatDateTW, formatDateTimeTW } from "@/lib/date";
-import {
-  listPastForPatient,
-  listUpcomingForPatient,
-} from "@/server/queries/appointments";
+import { ageAt, formatDateTW, formatDateTimeTW, taipeiDayStart } from "@/lib/date";
+import { listAppointmentsForPatientDetail } from "@/server/queries/appointments";
 import { getPatient } from "@/server/queries/patients";
 import {
-  getPatientPackageBalances,
+  computePackageBalancesFromTreatments,
   listTreatmentsByPatient,
 } from "@/server/queries/treatments";
 import { requireSession } from "@/server/rbac";
@@ -41,22 +38,54 @@ export default async function PatientDetailPage({ params }: PatientDetailPagePro
   const session = await requireSession();
   const { id } = await params;
 
-  const patient = await getPatient(id);
+  // All three reads run in parallel — getPatient no longer waterfalls
+  // before the others. If the patient doesn't exist, the wasted work
+  // on treatments/appointments is negligible compared to the 100ms
+  // waterfall step we save in the common case.
+  const [patient, treatments, allAppointments] = await Promise.all([
+    getPatient(id),
+    listTreatmentsByPatient(id),
+    listAppointmentsForPatientDetail(id),
+  ]);
+
   if (!patient) {
     notFound();
   }
 
-  const [
-    treatments,
-    upcomingAppointments,
-    pastAppointments,
-    packageBalances,
-  ] = await Promise.all([
-    listTreatmentsByPatient(patient.id),
-    listUpcomingForPatient(patient.id),
-    listPastForPatient(patient.id, 10),
-    getPatientPackageBalances(patient.id),
-  ]);
+  // Compute "today in Taipei" once, then split appointments in JS using
+  // the same predicates as the old listUpcoming/listPast queries.
+  const todayKey = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Taipei",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  const todayStartMs = taipeiDayStart(todayKey).getTime();
+
+  const upcomingAppointments = allAppointments
+    .filter(
+      (a) => a.scheduledAt.getTime() >= todayStartMs && a.status !== "CANCELLED",
+    )
+    .sort((a, b) => {
+      // Re-sort ascending (the SQL was descending for the past list).
+      const dt = a.scheduledAt.getTime() - b.scheduledAt.getTime();
+      if (dt !== 0) return dt;
+      // Same day → MORNING < AFTERNOON < EVENING.
+      const order = { MORNING: 0, AFTERNOON: 1, EVENING: 2 };
+      return order[a.session] - order[b.session];
+    });
+
+  const pastAppointments = allAppointments
+    .filter(
+      (a) =>
+        a.scheduledAt.getTime() < todayStartMs ||
+        a.status === "COMPLETED" ||
+        a.status === "NO_SHOW" ||
+        a.status === "CANCELLED",
+    )
+    .slice(0, 10);
+
+  const packageBalances = computePackageBalancesFromTreatments(treatments);
 
   const canEdit = session.user.role === "DOCTOR" || session.user.role === "ADMIN";
   const canDelete = session.user.role === "DOCTOR" || session.user.role === "ADMIN";

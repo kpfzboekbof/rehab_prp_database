@@ -5,10 +5,70 @@ export async function listTreatmentsByPatient(patientId: string) {
     where: { patientId },
     orderBy: { treatmentDate: "desc" },
     include: {
-      product: { select: { id: true, name: true, packageSize: true } },
+      // Include unitPrice on the product so the patient detail page can
+      // compute package balances from this same query result, instead of
+      // running an extra groupBy + product fetch (see
+      // `computePackageBalancesFromTreatments` below).
+      product: { select: { id: true, name: true, packageSize: true, unitPrice: true } },
       doctor: { select: { id: true, name: true } },
     },
   });
+}
+
+/**
+ * Compute prepaid-package balances directly from an in-memory treatment
+ * list. Used by the patient detail page to avoid a second round-trip
+ * (the previous version called `getPatientPackageBalances`, which ran
+ * its own groupBy + findMany products — together ~2 extra queries).
+ *
+ * Same semantics as `getPatientPackageBalances`:
+ *   remaining = SUM(quantity) - SUM(vialsUsed)
+ * over treatments where the product has a non-null packageSize.
+ *
+ * Pass the result of `listTreatmentsByPatient` (which now includes
+ * product.unitPrice + product.packageSize) and you get the same
+ * `PackageBalance[]` shape as the standalone query.
+ */
+type TreatmentRowForBalance = {
+  productId: string;
+  quantity: number;
+  vialsUsed: number;
+  product: {
+    id: string;
+    name: string;
+    unitPrice: number;
+    packageSize: number | null;
+  };
+};
+
+export function computePackageBalancesFromTreatments(
+  treatments: TreatmentRowForBalance[],
+): PackageBalance[] {
+  const byProduct = new Map<string, PackageBalance>();
+  for (const t of treatments) {
+    if (t.product.packageSize == null) continue;
+    let entry = byProduct.get(t.product.id);
+    if (!entry) {
+      entry = {
+        productId: t.product.id,
+        productName: t.product.name,
+        packageSize: t.product.packageSize,
+        unitPrice: t.product.unitPrice,
+        totalPurchased: 0,
+        totalUsed: 0,
+        remaining: 0,
+      };
+      byProduct.set(t.product.id, entry);
+    }
+    entry.totalPurchased += t.quantity;
+    entry.totalUsed += t.vialsUsed;
+  }
+  for (const entry of byProduct.values()) {
+    entry.remaining = entry.totalPurchased - entry.totalUsed;
+  }
+  return Array.from(byProduct.values()).sort((a, b) =>
+    a.productName.localeCompare(b.productName),
+  );
 }
 
 export async function getTreatment(id: string) {

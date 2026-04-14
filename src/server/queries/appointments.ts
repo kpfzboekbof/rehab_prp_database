@@ -125,6 +125,39 @@ export async function listPastForPatient(patientId: string, limit = 20) {
 }
 
 /**
+ * Combined query for the patient detail page: fetches up to 50 most
+ * recent appointments for a patient in one round-trip. Replaces two
+ * separate `listUpcomingForPatient` + `listPastForPatient` calls.
+ *
+ * The page splits the result into upcoming / past in JS using the
+ * same predicates as the original two queries:
+ *   upcoming = scheduledAt ≥ today AND status != CANCELLED
+ *   past     = scheduledAt < today OR status in (COMPLETED, NO_SHOW, CANCELLED)
+ *
+ * Uses a tighter `select` than `appointmentInclude` because the
+ * patient-detail page does NOT need patient/sourceTreatment/followUpCall
+ * — they are redundant on a page that's already scoped to one patient.
+ *
+ * 50 rows is plenty for any realistic patient (most patients have
+ * fewer than 20 appointments lifetime). If a patient ever exceeds
+ * 50 the page still renders correctly, just truncates the past list.
+ */
+export async function listAppointmentsForPatientDetail(patientId: string) {
+  return db.followUpAppointment.findMany({
+    where: { patientId },
+    orderBy: [{ scheduledAt: "desc" }, { session: "desc" }],
+    take: 50,
+    select: {
+      id: true,
+      scheduledAt: true,
+      session: true,
+      status: true,
+      reason: true,
+    },
+  });
+}
+
+/**
  * Lightweight list of all non-deleted patients for the appointment form's
  * picker. Small clinic → return all sorted by name.
  */

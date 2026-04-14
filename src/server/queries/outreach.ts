@@ -6,6 +6,7 @@ import type {
   OutreachReason,
   User,
 } from "@prisma/client";
+import { unstable_cache } from "next/cache";
 
 import { db } from "@/lib/db";
 
@@ -346,10 +347,12 @@ export interface OutreachCounts {
 }
 
 /**
- * Lightweight counts used by the dashboard cards. Uses default thresholds
- * (3 months for dormant, 30 days for package finished).
+ * Uncached implementation of the dashboard counts. Runs three heavy
+ * list queries in parallel. Do not call directly — use the cached
+ * `countOutreachLists` wrapper instead, which holds the result for
+ * 5 minutes to keep the dashboard / analytics hub snappy.
  */
-export async function countOutreachLists(): Promise<OutreachCounts> {
+async function computeOutreachCounts(): Promise<OutreachCounts> {
   const [dormant, packageFinished, noShow] = await Promise.all([
     listDormantPatients(3).then((r) => r.length),
     listPackageFinishedPatients(30).then((r) => r.length),
@@ -357,5 +360,27 @@ export async function countOutreachLists(): Promise<OutreachCounts> {
   ]);
   return { dormant, packageFinished, noShow };
 }
+
+/**
+ * Cached counts used by the dashboard cards and the /analytics hub.
+ * Uses default thresholds (3 months for dormant, 30 days for package
+ * finished). Cached for 5 minutes because the underlying data changes
+ * on the order of days — a slightly stale count is harmless and
+ * saves three full table scans per dashboard render.
+ *
+ * Cache is keyed by the tag `outreach-counts`, which server actions
+ * that change patient / treatment / appointment state should
+ * `revalidateTag("outreach-counts")` if they need the dashboard to
+ * reflect the change immediately. By default we let the 5-minute TTL
+ * expire on its own.
+ */
+export const countOutreachLists = unstable_cache(
+  computeOutreachCounts,
+  ["outreach-counts-v1"],
+  {
+    revalidate: 300, // 5 minutes
+    tags: ["outreach-counts"],
+  },
+);
 
 export type OutreachReasonKey = OutreachReason;

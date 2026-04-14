@@ -47,8 +47,8 @@ export default async function SessionsInsightsPage({
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <div className="text-sm text-neutral-500">
-        <Link href="/reports/monthly" className="underline-offset-4 hover:underline">
-          月業績報表
+        <Link href="/analytics" className="underline-offset-4 hover:underline">
+          業務分析
         </Link>
         <span className="mx-2">/</span>
         <span>診次使用率</span>

@@ -5,14 +5,14 @@ import type { Role } from "@prisma/client";
  * sections. The sidebar ignores this and shows a flat list.
  *
  *   clinical — daily patient-facing work (patients / calendar / reminders)
- *   outreach — marketing / retention action lists (dormant, package finished,
- *              no-show). Live lists the nurse works through, separate from
- *              financial reports.
- *   business — money + research outputs (monthly report, retention analysis,
- *              session utilisation, new-patient funnel, research DB)
+ *   business — financial reports + business analytics hub + research DB.
+ *              The /analytics hub collapses all the outreach action
+ *              lists (dormant, package-finished, no-show) and the
+ *              analytics reports (retention, sessions, funnel) behind
+ *              one sidebar entry so the nav stays short.
  *   admin    — system configuration (users / products / commission)
  */
-export type NavCategory = "clinical" | "outreach" | "business" | "admin";
+export type NavCategory = "clinical" | "business" | "admin";
 
 export interface NavItem {
   href: string;
@@ -28,14 +28,8 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/calendar", label: "回診日曆", category: "clinical" },
   { href: "/reminders", label: "回診提醒", category: "clinical" },
 
-  { href: "/outreach/dormant", label: "沉睡病人", category: "outreach" },
-  { href: "/outreach/package-finished", label: "套組用完", category: "outreach" },
-  { href: "/outreach/no-show", label: "爽約未補約", category: "outreach" },
-
+  { href: "/analytics", label: "業務分析", category: "business" },
   { href: "/reports/monthly", label: "月業績報表", category: "business", roles: ["DOCTOR", "ADMIN"] },
-  { href: "/reports/insights/retention", label: "回購分析", category: "business", roles: ["DOCTOR", "ADMIN"] },
-  { href: "/reports/insights/sessions", label: "診次使用率", category: "business", roles: ["DOCTOR", "ADMIN"] },
-  { href: "/reports/insights/funnel", label: "新客轉化漏斗", category: "business", roles: ["DOCTOR", "ADMIN"] },
   { href: "/research", label: "研究資料庫", category: "business", roles: ["DOCTOR", "ADMIN"] },
 
   { href: "/admin/users", label: "使用者管理", category: "admin", roles: ["ADMIN"] },

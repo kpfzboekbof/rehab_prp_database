@@ -31,8 +31,8 @@ export default async function PackageFinishedOutreachPage({
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <div className="text-sm text-neutral-500">
-        <Link href="/outreach" className="underline-offset-4 hover:underline">
-          行銷行動
+        <Link href="/analytics" className="underline-offset-4 hover:underline">
+          業務分析
         </Link>
         <span className="mx-2">/</span>
         <span>套組用完</span>

@@ -47,12 +47,6 @@ const CATEGORY_STYLES: Record<
     border: "border-l-[#1D697C]",
     line: "bg-[#1D697C]/30",
   },
-  outreach: {
-    label: "行銷行動",
-    accent: "text-[#ED6D3D]",
-    border: "border-l-[#ED6D3D]",
-    line: "bg-[#ED6D3D]/30",
-  },
   business: {
     label: "業務管理",
     accent: "text-[#6A5BA3]",
@@ -67,7 +61,7 @@ const CATEGORY_STYLES: Record<
   },
 };
 
-const SECTION_ORDER: NavCategory[] = ["clinical", "outreach", "business", "admin"];
+const SECTION_ORDER: NavCategory[] = ["clinical", "business", "admin"];
 
 type Stat =
   | { kind: "number"; value: number; unit: string }
@@ -149,30 +143,19 @@ export default async function DashboardPage() {
         return dueReminderCount > 0
           ? { kind: "number", value: dueReminderCount, unit: "位今日待電訪" }
           : { kind: "text", text: "今日無須電訪" };
-      case "/outreach/dormant":
-        return outreachCounts.dormant > 0
+      case "/analytics": {
+        const totalOutreach =
+          outreachCounts.dormant +
+          outreachCounts.packageFinished +
+          outreachCounts.noShow;
+        return totalOutreach > 0
           ? {
               kind: "number",
-              value: outreachCounts.dormant,
-              unit: "位沉睡病人待聯絡",
+              value: totalOutreach,
+              unit: "位病人待聯絡",
             }
-          : { kind: "text", text: "目前沒有沉睡病人" };
-      case "/outreach/package-finished":
-        return outreachCounts.packageFinished > 0
-          ? {
-              kind: "number",
-              value: outreachCounts.packageFinished,
-              unit: "位套組用完待續購",
-            }
-          : { kind: "text", text: "目前沒有套組用完的病人" };
-      case "/outreach/no-show":
-        return outreachCounts.noShow > 0
-          ? {
-              kind: "number",
-              value: outreachCounts.noShow,
-              unit: "位爽約未補約待聯絡",
-            }
-          : { kind: "text", text: "目前沒有爽約未補約的病人" };
+          : { kind: "text", text: "目前沒有待聯絡名單" };
+      }
       case "/admin/users":
         return { kind: "number", value: activeUserCount, unit: "位啟用使用者" };
       case "/admin/products":
@@ -190,12 +173,6 @@ export default async function DashboardPage() {
         return isDoctor
           ? { kind: "currency", value: monthCommission, unit: "本月抽成" }
           : { kind: "currency", value: monthRevenue, unit: "本月收入" };
-      case "/reports/insights/retention":
-        return { kind: "text", text: "終身價值 / 回購率" };
-      case "/reports/insights/sessions":
-        return { kind: "text", text: "早 / 午 / 晚診分布" };
-      case "/reports/insights/funnel":
-        return { kind: "text", text: "新客戶轉化漏斗" };
       case "/research":
         return totalTreatmentRecords > 0
           ? {

@@ -7,8 +7,9 @@ import {
   type NavCategory,
 } from "@/components/layout/nav-items";
 import { CLINIC_NAME } from "@/lib/clinic";
+import { formatTWD } from "@/lib/currency";
 import { db } from "@/lib/db";
-import { formatDateTW } from "@/lib/date";
+import { formatDateTW, taipeiDayStart } from "@/lib/date";
 import { countDueRemindersToday } from "@/server/queries/reminders";
 import { requireSession } from "@/server/rbac";
 
@@ -63,6 +64,7 @@ const SECTION_ORDER: NavCategory[] = ["clinical", "business", "admin"];
 
 type Stat =
   | { kind: "number"; value: number; unit: string }
+  | { kind: "currency"; value: number; unit: string }
   | { kind: "text"; text: string }
   | { kind: "placeholder" };
 
@@ -74,6 +76,25 @@ export default async function DashboardPage() {
     (i) => i.href !== "/dashboard" && (!i.roles || i.roles.includes(role)),
   );
 
+  // Taipei month window for "this month" stats.
+  const nowTaipei = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Taipei",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  const [taipeiYear, taipeiMonth] = nowTaipei.split("-").map(Number);
+  const monthStart = taipeiDayStart(
+    `${taipeiYear}-${String(taipeiMonth).padStart(2, "0")}-01`,
+  );
+  const nextMonthStart = taipeiDayStart(
+    taipeiMonth === 12
+      ? `${taipeiYear + 1}-01-01`
+      : `${taipeiYear}-${String(taipeiMonth + 1).padStart(2, "0")}-01`,
+  );
+  // DOCTOR-scoped vs ADMIN-sees-all for the monthly revenue card.
+  const isDoctor = role === "DOCTOR";
+
   const [
     patientCount,
     upcomingAppointmentCount,
@@ -81,6 +102,8 @@ export default async function DashboardPage() {
     activeUserCount,
     activeProductCount,
     doctorsWithCommissionCount,
+    monthRevenueAgg,
+    totalTreatmentRecords,
   ] = await Promise.all([
     db.patient.count({ where: { deletedAt: null } }),
     db.followUpAppointment.count({
@@ -93,7 +116,17 @@ export default async function DashboardPage() {
     db.user.count({ where: { active: true } }),
     db.pRPProduct.count({ where: { active: true } }),
     db.doctorCommissionRate.count({ where: { effectiveTo: null } }),
+    db.treatmentRecord.aggregate({
+      where: {
+        treatmentDate: { gte: monthStart, lt: nextMonthStart },
+        ...(isDoctor ? { doctorId: session.user.id } : {}),
+      },
+      _sum: { totalAmount: true, commissionAmount: true },
+    }),
+    db.treatmentRecord.count(),
   ]);
+  const monthRevenue = monthRevenueAgg._sum.totalAmount ?? 0;
+  const monthCommission = monthRevenueAgg._sum.commissionAmount ?? 0;
 
   function statForHref(href: string): Stat {
     switch (href) {
@@ -117,6 +150,21 @@ export default async function DashboardPage() {
           value: doctorsWithCommissionCount,
           unit: "位醫師有抽成規則",
         };
+      case "/reports/monthly":
+        if (monthRevenue <= 0) {
+          return { kind: "text", text: "本月尚無治療紀錄" };
+        }
+        return isDoctor
+          ? { kind: "currency", value: monthCommission, unit: "本月抽成" }
+          : { kind: "currency", value: monthRevenue, unit: "本月收入" };
+      case "/research":
+        return totalTreatmentRecords > 0
+          ? {
+              kind: "number",
+              value: totalTreatmentRecords,
+              unit: "筆治療紀錄可查詢",
+            }
+          : { kind: "text", text: "尚無治療紀錄" };
       default:
         return { kind: "placeholder" };
     }
@@ -190,12 +238,23 @@ export default async function DashboardPage() {
                             </div>
                           </div>
                         )}
-                        {stat.kind === "text" && (
+                        {stat.kind === "currency" && (
                           <div>
-                            <div className="text-2xl font-light leading-none text-neutral-400">
-                              ◯
+                            <div
+                              className={`text-3xl font-light leading-none ${style.accent}`}
+                            >
+                              {formatTWD(stat.value)}
                             </div>
                             <div className="mt-2 text-xs text-neutral-500">
+                              {stat.unit}
+                            </div>
+                          </div>
+                        )}
+                        {stat.kind === "text" && (
+                          <div>
+                            <div
+                              className={`text-lg font-light leading-tight ${style.accent}`}
+                            >
                               {stat.text}
                             </div>
                           </div>

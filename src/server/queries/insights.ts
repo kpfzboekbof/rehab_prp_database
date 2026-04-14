@@ -1,4 +1,6 @@
-import type { AppointmentSession, Prisma } from "@prisma/client";
+import type { AppointmentSession } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import { unstable_cache } from "next/cache";
 
 import { db } from "@/lib/db";
 import { taipeiDayStart } from "@/lib/date";
@@ -63,83 +65,157 @@ function currentTaipeiYearMonth(): [number, number] {
   return [y, m];
 }
 
-export async function getMonthlyTrend({
+/**
+ * Raw row shape returned by the Postgres CTE below. Bigints come back
+ * for `SUM(int)` results; we coerce them to JS Number on the way out
+ * (revenue stays well within safe-integer range for any realistic
+ * clinic).
+ */
+interface MonthlyTrendRawRow {
+  month_key: string;
+  treatment_count: number;
+  charging_count: number;
+  distinct_patients: number;
+  new_patients: number;
+  gross_revenue: bigint | number;
+  total_commission: bigint | number;
+}
+
+/**
+ * Internal compute-only function. The exported `getMonthlyTrend`
+ * wraps this in `unstable_cache` so repeated reads (e.g. the user
+ * clicking "上月" / "下月" on the monthly report) hit the cache
+ * instead of re-running the SQL.
+ *
+ * Implementation: ONE round-trip to Postgres. The previous version
+ * ran 12 × 4 = 48 separate Prisma queries, which against Neon over
+ * the network was the dominant cost of /reports/monthly (≈4 seconds
+ * wall time). This CTE computes all 12 monthly buckets + the new-
+ * patient count in a single query that Postgres can plan and execute
+ * in well under 100ms.
+ *
+ * "New patient in month M" semantics: a patient whose FIRST EVER
+ * treatment (subject to the same `doctorId` filter, when scoped to a
+ * single doctor) lands in month M. Computed with a CTE that takes
+ * MIN(treatmentDate) per patient, bucketed by Taipei calendar month.
+ */
+async function computeMonthlyTrend({
   monthsBack,
   doctorId,
 }: MonthlyTrendParams): Promise<MonthlyTrendPoint[]> {
   const [currentYear, currentMonth] = currentTaipeiYearMonth();
 
-  const months: Array<{ year: number; month: number }> = [];
+  // Build the array of (year, month) buckets we want to return, walking
+  // backwards from the current Taipei month. Used both as the SQL
+  // window and to fill in zero-rows for months with no treatments.
+  const windows: Array<{ year: number; month: number; key: string }> = [];
   for (let i = monthsBack - 1; i >= 0; i--) {
-    // Walk backwards from current month.
     let m = currentMonth - i;
     let y = currentYear;
     while (m <= 0) {
       m += 12;
       y -= 1;
     }
-    months.push({ year: y, month: m });
+    windows.push({
+      year: y,
+      month: m,
+      key: `${y}-${String(m).padStart(2, "0")}`,
+    });
+  }
+  const oldestStart = taipeiMonthWindow(windows[0].year, windows[0].month).start;
+
+  // Optional doctorId filter, injected into both the inner CTE (for
+  // first-treatment-per-patient) and the per-month aggregation. We
+  // keep the column name unqualified so it works against the bare
+  // table reference inside both CTEs.
+  const doctorWhere = doctorId
+    ? Prisma.sql`AND "doctorId" = ${doctorId}`
+    : Prisma.empty;
+
+  const rows = await db.$queryRaw<MonthlyTrendRawRow[]>(Prisma.sql`
+    WITH
+      patient_first_month AS (
+        SELECT
+          "patientId",
+          to_char((MIN("treatmentDate") AT TIME ZONE 'Asia/Taipei'), 'YYYY-MM') AS first_month
+        FROM "TreatmentRecord"
+        WHERE 1 = 1 ${doctorWhere}
+        GROUP BY "patientId"
+      ),
+      monthly_agg AS (
+        SELECT
+          to_char(("treatmentDate" AT TIME ZONE 'Asia/Taipei'), 'YYYY-MM') AS month_key,
+          COUNT(*)::int AS treatment_count,
+          COUNT(*) FILTER (WHERE "totalAmount" > 0)::int AS charging_count,
+          COUNT(DISTINCT "patientId")::int AS distinct_patients,
+          COALESCE(SUM("totalAmount"), 0)::bigint AS gross_revenue,
+          COALESCE(SUM("commissionAmount"), 0)::bigint AS total_commission
+        FROM "TreatmentRecord"
+        WHERE "treatmentDate" >= ${oldestStart} ${doctorWhere}
+        GROUP BY to_char(("treatmentDate" AT TIME ZONE 'Asia/Taipei'), 'YYYY-MM')
+      ),
+      new_per_month AS (
+        SELECT
+          first_month AS month_key,
+          COUNT(*)::int AS new_patients
+        FROM patient_first_month
+        WHERE first_month >= to_char((${oldestStart}::timestamptz AT TIME ZONE 'Asia/Taipei'), 'YYYY-MM')
+        GROUP BY first_month
+      )
+    SELECT
+      m.month_key,
+      m.treatment_count,
+      m.charging_count,
+      m.distinct_patients,
+      COALESCE(n.new_patients, 0)::int AS new_patients,
+      m.gross_revenue,
+      m.total_commission
+    FROM monthly_agg m
+    LEFT JOIN new_per_month n USING (month_key)
+    ORDER BY m.month_key
+  `);
+
+  // Index the SQL results by month key so we can fill in zero-rows
+  // for any windows the database had no data for.
+  const byMonth = new Map<string, MonthlyTrendRawRow>();
+  for (const row of rows) {
+    byMonth.set(row.month_key, row);
   }
 
-  const points = await Promise.all(
-    months.map(async ({ year, month }): Promise<MonthlyTrendPoint> => {
-      const { start, end } = taipeiMonthWindow(year, month);
-      const where: Prisma.TreatmentRecordWhereInput = {
-        treatmentDate: { gte: start, lt: end },
-        ...(doctorId ? { doctorId } : {}),
-      };
-
-      const [agg, chargingCount, distinctPatients] = await Promise.all([
-        db.treatmentRecord.aggregate({
-          where,
-          _count: { id: true },
-          _sum: { totalAmount: true, commissionAmount: true },
-        }),
-        db.treatmentRecord.count({
-          where: { ...where, totalAmount: { gt: 0 } },
-        }),
-        db.treatmentRecord.findMany({
-          where,
-          distinct: ["patientId"],
-          select: { patientId: true },
-        }),
-      ]);
-
-      // "New patient" this month = a patient whose *first ever*
-      // treatment (within the doctor filter if any) falls in this
-      // window. Computed with a subquery of earlier treatments.
-      const patientIds = distinctPatients.map((r) => r.patientId);
-      let newPatientCount = 0;
-      if (patientIds.length > 0) {
-        const earlier = await db.treatmentRecord.findMany({
-          where: {
-            patientId: { in: patientIds },
-            treatmentDate: { lt: start },
-            ...(doctorId ? { doctorId } : {}),
-          },
-          distinct: ["patientId"],
-          select: { patientId: true },
-        });
-        const returning = new Set(earlier.map((r) => r.patientId));
-        newPatientCount = patientIds.filter((id) => !returning.has(id)).length;
-      }
-
-      return {
-        month: `${year}-${String(month).padStart(2, "0")}`,
-        year,
-        monthNumber: month,
-        treatmentCount: agg._count.id,
-        chargingCount,
-        distinctPatientCount: distinctPatients.length,
-        newPatientCount,
-        grossRevenue: agg._sum.totalAmount ?? 0,
-        totalCommission: agg._sum.commissionAmount ?? 0,
-      };
-    }),
-  );
-
-  return points;
+  return windows.map(({ year, month, key }): MonthlyTrendPoint => {
+    const row = byMonth.get(key);
+    return {
+      month: key,
+      year,
+      monthNumber: month,
+      treatmentCount: row?.treatment_count ?? 0,
+      chargingCount: row?.charging_count ?? 0,
+      distinctPatientCount: row?.distinct_patients ?? 0,
+      newPatientCount: row?.new_patients ?? 0,
+      grossRevenue: row ? Number(row.gross_revenue) : 0,
+      totalCommission: row ? Number(row.total_commission) : 0,
+    };
+  });
 }
+
+/**
+ * Cached wrapper around `computeMonthlyTrend`. The trend is "the
+ * last 12 months from today" — it doesn't change when the user picks
+ * a different month on the monthly report, so caching it makes
+ * "上月 / 下月" navigation snappy. 10-minute TTL is plenty since
+ * historical months cannot move and the current month moves slowly.
+ *
+ * Cache key is automatically scoped by the params object (so per-
+ * doctor and unscoped versions cache separately).
+ */
+export const getMonthlyTrend = unstable_cache(
+  computeMonthlyTrend,
+  ["monthly-trend-v2"],
+  {
+    revalidate: 600, // 10 minutes
+    tags: ["monthly-trend"],
+  },
+);
 
 // ---------------------------------------------------------------
 // #6 — Retention / repeat-purchase analysis

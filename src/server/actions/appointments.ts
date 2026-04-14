@@ -175,3 +175,40 @@ export async function updateAppointmentStatus(
   revalidatePath(`/patients/${existing.patientId}`);
   return { ok: true };
 }
+
+/**
+ * Hard-delete an appointment. Unlike `Patient`, appointments are not
+ * subject to the 7-year medical-record retention rule — they're a
+ * scheduling artifact, not a clinical record. Wrongly-scheduled or
+ * duplicate entries are removed outright.
+ *
+ * If the appointment has a linked `FollowUpCall`, it cascades via the
+ * `onDelete: Cascade` on the schema's FK, so we do not need to delete
+ * it explicitly. That's an intentional design choice: if you delete
+ * the appointment the reminder phone call lost context anyway.
+ *
+ * Open to DOCTOR / STAFF / ADMIN, matching create/update permissions.
+ */
+export async function deleteAppointment(id: string): Promise<ActionState> {
+  await requireRole([...CLINICAL_ROLES]);
+
+  const existing = await db.followUpAppointment.findUnique({
+    where: { id },
+    select: { id: true, patientId: true, scheduledAt: true },
+  });
+  if (!existing) {
+    return { ok: false, error: "找不到回診排程" };
+  }
+
+  try {
+    await db.followUpAppointment.delete({ where: { id } });
+  } catch (err) {
+    console.error("deleteAppointment failed", err);
+    return { ok: false, error: "刪除失敗" };
+  }
+
+  revalidatePath("/calendar");
+  revalidatePath(`/patients/${existing.patientId}`);
+  revalidatePath("/reminders");
+  redirect(`/calendar?day=${taipeiDateKey(existing.scheduledAt)}`);
+}

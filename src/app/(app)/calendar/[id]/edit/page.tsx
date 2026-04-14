@@ -9,7 +9,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { AppointmentForm } from "@/components/calendar/appointment-form";
-import { taipeiDateKey } from "@/lib/date";
+import { DeleteAppointmentButton } from "@/components/calendar/delete-appointment-button";
+import { APPOINTMENT_SESSION_LABELS } from "@/lib/appointment-session";
+import { formatDateTW, taipeiDateKey } from "@/lib/date";
 import { updateAppointment } from "@/server/actions/appointments";
 import {
   getAppointment,
@@ -65,6 +67,25 @@ export default async function EditAppointmentPage({ params }: EditAppointmentPag
             }}
             submitLabel="儲存變更"
             cancelHref="/calendar"
+          />
+        </CardContent>
+      </Card>
+
+      {/* Destructive zone — separated from the form so the delete
+          button isn't visually adjacent to the save button. */}
+      <Card className="border-red-200">
+        <CardHeader>
+          <CardTitle className="text-base text-red-900">刪除此排程</CardTitle>
+          <CardDescription>
+            將這筆回診排程從系統中移除。此操作無法復原。若只是暫時取消，建議改「狀態」改為「已取消」而不是刪除。
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DeleteAppointmentButton
+            id={appointment.id}
+            patientName={appointment.patient.name}
+            dateLabel={formatDateTW(appointment.scheduledAt)}
+            sessionLabel={APPOINTMENT_SESSION_LABELS[appointment.session]}
           />
         </CardContent>
       </Card>

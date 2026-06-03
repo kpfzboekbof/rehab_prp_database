@@ -3,11 +3,9 @@ import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
 
 import { auth, signIn } from "@/auth";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { CLINIC_NAME } from "@/lib/clinic";
+import { LoginForm } from "./login-form";
 
 interface LoginPageProps {
   searchParams: Promise<{ from?: string; error?: string }>;
@@ -52,38 +50,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <CardDescription>{CLINIC_NAME}</CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={login} className="flex flex-col gap-4">
-            <input type="hidden" name="from" value={from || "/dashboard"} />
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="email">電子郵件</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                required
-                autoComplete="username"
-                placeholder="admin@clinic.local"
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="password">密碼</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                required
-                autoComplete="current-password"
-              />
-            </div>
-            {error && (
-              <p className="text-sm text-red-600" role="alert">
-                登入失敗，請確認帳號密碼。
-              </p>
-            )}
-            <Button type="submit" className="w-full">
-              登入
-            </Button>
-          </form>
+          <LoginForm action={login} from={from || "/dashboard"} error={error} />
           <p className="mt-4 text-center text-xs text-neutral-500">
             忘記密碼？請聯絡系統管理員。
             <br />

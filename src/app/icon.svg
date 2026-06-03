@@ -94,6 +94,4 @@
         stroke-opacity="0.16" stroke-width="2.5"/>
   <ellipse cx="494" cy="300" rx="7" ry="15" fill="#FFFFFF" opacity="0.5"
            transform="rotate(-20 494 300)"/>
-
-  <text x="513" y="912" text-anchor="middle" font-family="Liberation Sans, DejaVu Sans, Arial, sans-serif" font-size="88" font-weight="700" letter-spacing="9" fill="#2A3442">PRP</text>
 </svg>

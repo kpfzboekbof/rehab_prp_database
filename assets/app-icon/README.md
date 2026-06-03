@@ -11,21 +11,36 @@ A blood droplet that depicts the **centrifuge separation** used to prepare PRP:
 - **Deep red blood cells** settled in the lower bulb
 
 Clean, premium, clinical look on a light background with a warm glow, matching
-the app's neutral theme.
+the app's neutral theme. (Textless — the layered droplet carries the concept.)
 
 ## Files
 
 | File | Purpose |
 | --- | --- |
-| `prp-app-icon.svg` | Editable vector source (textless, **primary**) |
-| `prp-app-icon-wordmark.svg` | Variant with a "PRP" wordmark |
+| `prp-app-icon.svg` | Editable vector master |
 | `build_icon.py` | Regenerates every PNG below from the SVG |
-| `preview-compare.png` | Side-by-side of both variants |
 | `png/AppStore-1024.png` | **App Store master** — 1024², opaque, no rounded corners (iOS applies the mask) |
 | `png/preview-rounded-1024.png` | iOS rounded-corner preview (home-screen look) |
-| `png/icon-{40…180}.png` | Standard iOS app-icon sizes |
+| `png/icon-{40…512}.png` | Standard iOS app-icon + web/PWA sizes |
+| `png/favicon.ico` | Multi-resolution favicon (16 / 32 / 48 / 64) |
 
-`-wordmark` files are the same set for variant B.
+## Wired into the Next.js app
+
+Variant A is live via Next.js file-based metadata (no `<link>` tags needed —
+Next auto-detects these and injects them):
+
+- `src/app/icon.svg` — scalable favicon ← `prp-app-icon.svg`
+- `src/app/apple-icon.png` — Apple touch / home-screen icon (180²) ← `png/icon-180.png`
+- `src/app/favicon.ico` — legacy/browser-tab favicon ← `png/favicon.ico`
+
+To refresh those after editing the design, re-run the build and re-copy:
+
+```bash
+python3 build_icon.py
+cp prp-app-icon.svg      ../../src/app/icon.svg
+cp png/icon-180.png      ../../src/app/apple-icon.png
+cp png/favicon.ico       ../../src/app/favicon.ico
+```
 
 ## Regenerate
 
@@ -36,15 +51,3 @@ python3 build_icon.py
 
 Edit `prp-app-icon.svg` (or the template in `build_icon.py`) and re-run to
 rebuild all sizes.
-
-## Use in the Next.js app (optional)
-
-To wire it up as the favicon / Apple touch icon, copy into the app route:
-
-```bash
-cp png/icon-180.png  ../../src/app/apple-icon.png
-cp png/AppStore-1024.png ../../src/app/icon.png   # Next downscales for favicon
-```
-
-Next.js auto-serves `src/app/icon.png` and `src/app/apple-icon.png` — no
-`<link>` tags needed.

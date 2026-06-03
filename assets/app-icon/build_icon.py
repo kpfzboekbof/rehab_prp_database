@@ -5,8 +5,7 @@ Concept: a blood droplet that depicts the centrifuge separation used to make
 PRP — pale plasma on top, a glowing gold "platelet-rich" band through the
 middle, deep red blood cells below, with platelet cells suspended in the
 plasma. Produces an App-Store-ready 1024x1024 master, an iOS rounded preview,
-and the standard iOS icon sizes, in both a textless and a "PRP" wordmark
-variant.
+the standard iOS icon sizes, and a multi-resolution favicon.ico.
 
 Run:  python3 build_icon.py
 Deps: cairosvg, pillow  (pip install cairosvg pillow)
@@ -17,28 +16,18 @@ from __future__ import annotations
 import os
 
 import cairosvg
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PNG_DIR = os.path.join(HERE, "png")
-
-FONT_REG = "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
-FONT_BOLD = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
 
 # Teardrop / droplet outline (tip at top, round bulb at bottom), 1024 canvas.
 DROPLET = ("M512 214 C590 286 738 420 738 568 "
            "A226 226 0 0 1 286 568 "
            "C286 420 434 286 512 214 Z")
 
-WORDMARK = (
-    '<text x="513" y="912" text-anchor="middle" '
-    'font-family="Liberation Sans, DejaVu Sans, Arial, sans-serif" '
-    'font-size="88" font-weight="700" letter-spacing="9" '
-    'fill="#2A3442">PRP</text>'
-)
 
-
-def svg(wordmark: bool) -> str:
+def svg() -> str:
     """Return the full 1024x1024 SVG source string."""
     return f'''<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024"
      viewBox="0 0 1024 1024">
@@ -136,15 +125,13 @@ def svg(wordmark: bool) -> str:
         stroke-opacity="0.16" stroke-width="2.5"/>
   <ellipse cx="494" cy="300" rx="7" ry="15" fill="#FFFFFF" opacity="0.5"
            transform="rotate(-20 494 300)"/>
-
-  {WORDMARK if wordmark else ''}
 </svg>'''
 
 
-def write_svg(name: str, wordmark: bool) -> str:
+def write_svg(name: str) -> str:
     path = os.path.join(HERE, name)
     with open(path, "w", encoding="utf-8") as fh:
-        fh.write(svg(wordmark))
+        fh.write(svg())
     return path
 
 
@@ -168,61 +155,32 @@ def round_corners(src_png: str, out_png: str, radius_ratio: float = 0.2237) -> s
     return out_png
 
 
-def comparison(rounded_plain: str, rounded_word: str, out_png: str) -> str:
-    """Side-by-side preview of both variants for quick choosing."""
-    tile = 460
-    pad, gap, top = 60, 80, 150
-    W = pad * 2 + tile * 2 + gap
-    H = top + tile + 150
-    canvas = Image.new("RGBA", (W, H), (244, 246, 249, 255))
-
-    title_f = ImageFont.truetype(FONT_BOLD, 56)
-    label_f = ImageFont.truetype(FONT_REG, 34)
-    d = ImageDraw.Draw(canvas)
-
-    title = "PRP — iPhone App Icon"
-    tb = d.textbbox((0, 0), title, font=title_f)
-    d.text(((W - (tb[2] - tb[0])) / 2, 46), title, font=title_f, fill=(42, 52, 66))
-
-    for i, (png, label) in enumerate([(rounded_plain, "A · textless"),
-                                      (rounded_word, "B · PRP wordmark")]):
-        x = pad + i * (tile + gap)
-        ico = Image.open(png).convert("RGBA").resize((tile, tile), Image.LANCZOS)
-        # soft platform-style drop shadow behind the tile
-        sh = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
-        ImageDraw.Draw(sh).rounded_rectangle(
-            [x + 10, top + 18, x + tile + 10, top + tile + 18],
-            radius=int(tile * 0.2237), fill=(20, 24, 30, 70))
-        canvas.alpha_composite(sh)
-        canvas.alpha_composite(ico, (x, top))
-        lb = d.textbbox((0, 0), label, font=label_f)
-        d.text((x + (tile - (lb[2] - lb[0])) / 2, top + tile + 28),
-               label, font=label_f, fill=(90, 100, 112))
-
-    canvas.convert("RGB").save(out_png)
-    return out_png
+def make_favicon(svg_path: str, out_ico: str) -> str:
+    """Multi-resolution favicon.ico rendered crisply from the SVG."""
+    tmp = os.path.join(PNG_DIR, "_favicon_src.png")
+    render_png(svg_path, tmp, 64)
+    Image.open(tmp).convert("RGBA").save(
+        out_ico, sizes=[(16, 16), (32, 32), (48, 48), (64, 64)])
+    os.remove(tmp)
+    return out_ico
 
 
 def main() -> None:
     os.makedirs(PNG_DIR, exist_ok=True)
+    src = write_svg("prp-app-icon.svg")
 
-    plain_svg = write_svg("prp-app-icon.svg", wordmark=False)
-    word_svg = write_svg("prp-app-icon-wordmark.svg", wordmark=True)
+    # App-Store-ready square master (opaque, no rounded corners — iOS masks).
+    master = render_png(src, os.path.join(PNG_DIR, "AppStore-1024.png"), 1024)
 
-    # App-Store-ready square masters (opaque, no rounded corners — iOS masks).
-    master_plain = render_png(plain_svg, os.path.join(PNG_DIR, "AppStore-1024.png"), 1024)
-    master_word = render_png(word_svg, os.path.join(PNG_DIR, "AppStore-1024-wordmark.png"), 1024)
+    # iOS rounded preview (what it looks like on the home screen).
+    round_corners(master, os.path.join(PNG_DIR, "preview-rounded-1024.png"))
 
-    # iOS rounded previews (what it looks like on the home screen).
-    prev_plain = round_corners(master_plain, os.path.join(PNG_DIR, "preview-rounded-1024.png"))
-    prev_word = round_corners(master_word, os.path.join(PNG_DIR, "preview-rounded-1024-wordmark.png"))
+    # Standard iOS app-icon sizes + a couple of web/PWA sizes.
+    for px in (512, 256, 180, 167, 152, 120, 87, 80, 76, 60, 58, 40):
+        render_png(src, os.path.join(PNG_DIR, f"icon-{px}.png"), px)
 
-    # Standard iOS app-icon sizes (from the textless master = primary).
-    for px in (180, 167, 152, 120, 87, 80, 76, 60, 58, 40):
-        render_png(plain_svg, os.path.join(PNG_DIR, f"icon-{px}.png"), px)
-
-    comparison(prev_plain, prev_word, os.path.join(HERE, "preview-compare.png"))
-    print("done -> assets/app-icon/png/ and preview-compare.png")
+    make_favicon(src, os.path.join(PNG_DIR, "favicon.ico"))
+    print("done -> assets/app-icon/ (svg + png/ + favicon.ico)")
 
 
 if __name__ == "__main__":

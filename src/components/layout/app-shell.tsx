@@ -18,7 +18,7 @@ export function AppShell({ userName, role, children }: AppShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
       <Header
         userName={userName}
         role={role}
@@ -45,7 +45,16 @@ export function AppShell({ userName, role, children }: AppShellProps) {
           </div>
         )}
 
-        <main className={cn("flex-1 p-4 pb-24 sm:p-6 md:pb-6")}>{children}</main>
+        {/* Bottom padding clears the fixed mobile tab bar (min-h-16) plus the
+            home-indicator safe area; collapses to a normal pad on md+ where the
+            tab bar is hidden. */}
+        <main
+          className={cn(
+            "flex-1 p-4 pb-[calc(5rem_+_env(safe-area-inset-bottom))] sm:p-6 md:pb-6",
+          )}
+        >
+          {children}
+        </main>
       </div>
 
       <MobileNav onOpenMenu={() => setSidebarOpen(true)} />

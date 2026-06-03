@@ -67,7 +67,10 @@ export async function createPatient(
 
   revalidatePath("/patients");
   revalidatePath("/dashboard");
-  redirect(`/patients/${createdId}`);
+  // Flow straight into "add a treatment" for the patient we just created —
+  // creating a patient is almost always the first step before recording their
+  // first PRP treatment, so skipping the detail page saves a tap.
+  redirect(`/patients/${createdId}/treatments/new`);
 }
 
 export async function updatePatient(

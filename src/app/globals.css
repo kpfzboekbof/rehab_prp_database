@@ -33,6 +33,10 @@
   body {
     background-color: white;
     color: #0a0a0a;
+    /* Stop iOS Safari from inflating text (and forcing a zoom) when the phone
+       is rotated to landscape. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
     font-family:
       system-ui,
       -apple-system,
@@ -41,5 +45,14 @@
       "Noto Sans TC",
       "Microsoft JhengHei",
       sans-serif;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 }

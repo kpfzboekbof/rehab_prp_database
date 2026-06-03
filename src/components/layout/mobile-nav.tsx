@@ -61,7 +61,7 @@ export function MobileNav({ onOpenMenu }: MobileNavProps) {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 flex h-16 items-stretch border-t border-neutral-200 bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-neutral-200 bg-white pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] md:hidden">
       {ITEMS.map((item) => {
         const active =
           pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -70,7 +70,7 @@ export function MobileNav({ onOpenMenu }: MobileNavProps) {
             key={item.href}
             href={item.href}
             className={cn(
-              "flex flex-1 flex-col items-center justify-center gap-1 text-[11px] font-medium",
+              "flex min-h-16 flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium",
               active ? "text-[#1D697C]" : "text-neutral-500",
             )}
           >
@@ -92,7 +92,7 @@ export function MobileNav({ onOpenMenu }: MobileNavProps) {
       <button
         type="button"
         onClick={onOpenMenu}
-        className="flex flex-1 flex-col items-center justify-center gap-1 text-[11px] font-medium text-neutral-500"
+        className="flex min-h-16 flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium text-neutral-500"
         aria-label="開啟更多選單"
       >
         <svg

@@ -129,6 +129,12 @@ export function TreatmentForm({
     }
   }
 
+  const previewNote = isPackage
+    ? packageMode === "PURCHASE"
+      ? `購入新套組：${selectedProduct?.packageSize} 瓶整套 ${formatTWD(selectedProduct?.unitPrice ?? 0)}`
+      : "使用現有套組，本次不重複收費"
+    : "依品項單價 × 瓶數計算";
+
   // Validation hints — purely client-side for UX, server re-validates.
   let vialsHint: string | null = null;
   let vialsError: string | null = null;
@@ -350,19 +356,15 @@ export function TreatmentForm({
           )}
         </div>
 
-        <div className="flex flex-col gap-2">
+        {/* Desktop: inline cost preview in the grid. On mobile this is hidden
+            in favour of the sticky bar at the bottom of the form. */}
+        <div className="hidden flex-col gap-2 sm:flex">
           <div className="rounded-md border border-neutral-200 bg-neutral-50 px-4 py-3">
             <div className="text-xs text-neutral-500">本次收費</div>
             <div className="mt-1 text-2xl font-semibold text-neutral-900">
               {formatTWD(previewTotal)}
             </div>
-            <div className="mt-1 text-xs text-neutral-500">
-              {isPackage
-                ? packageMode === "PURCHASE"
-                  ? `購入新套組：${selectedProduct?.packageSize} 瓶整套 ${formatTWD(selectedProduct?.unitPrice ?? 0)}`
-                  : "使用現有套組，本次不重複收費"
-                : "依品項單價 × 瓶數計算"}
-            </div>
+            <div className="mt-1 text-xs text-neutral-500">{previewNote}</div>
           </div>
         </div>
 
@@ -407,6 +409,22 @@ export function TreatmentForm({
         <Button asChild type="button" variant="outline">
           <Link href={cancelHref}>取消</Link>
         </Button>
+      </div>
+
+      {/* Mobile: sticky cost preview pinned above the bottom tab bar so the
+          running total stays visible while scrolling the long form. */}
+      <div className="pointer-events-none sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 sm:hidden">
+        <div className="flex items-center justify-between gap-3 rounded-md border border-neutral-300 bg-white/95 px-4 py-2.5 shadow-lg backdrop-blur">
+          <div className="min-w-0">
+            <div className="text-[11px] text-neutral-500">本次收費</div>
+            <div className="text-xl font-semibold text-neutral-900">
+              {formatTWD(previewTotal)}
+            </div>
+          </div>
+          <p className="max-w-[55%] truncate text-right text-[11px] text-neutral-500">
+            {previewNote}
+          </p>
+        </div>
       </div>
     </form>
   );

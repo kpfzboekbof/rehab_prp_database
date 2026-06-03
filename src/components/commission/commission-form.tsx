@@ -55,7 +55,7 @@ export function CommissionForm({
   const errorMessage = state && state.ok === false ? state.error : null;
 
   const selectClass =
-    "flex h-10 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 focus-visible:ring-offset-2";
+    "flex h-11 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-base sm:h-10 sm:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 focus-visible:ring-offset-2";
 
   return (
     <form action={formAction} className="flex flex-col gap-5">

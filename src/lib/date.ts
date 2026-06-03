@@ -135,9 +135,13 @@ export function utcToTaipeiDateTimeInput(value: Date | string): string {
  */
 export function ageAt(birthDate: Date | string, referenceDate: Date = new Date()): number {
   const birth = typeof birthDate === "string" ? new Date(birthDate) : birthDate;
-  let age = referenceDate.getFullYear() - birth.getFullYear();
-  const mDiff = referenceDate.getMonth() - birth.getMonth();
-  if (mDiff < 0 || (mDiff === 0 && referenceDate.getDate() < birth.getDate())) {
+  // Compare Taipei wall-clock dates on both sides — reading the raw UTC
+  // year/month/day would be off by one near the date boundary (e.g. a
+  // birthday computed at Taipei 06:00 = UTC 22:00 the previous day).
+  const [refY, refM, refD] = taipeiDateKey(referenceDate).split("-").map(Number);
+  const [birthY, birthM, birthD] = taipeiDateKey(birth).split("-").map(Number);
+  let age = refY - birthY;
+  if (refM < birthM || (refM === birthM && refD < birthD)) {
     age -= 1;
   }
   return age;

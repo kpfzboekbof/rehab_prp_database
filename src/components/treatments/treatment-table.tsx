@@ -35,13 +35,13 @@ export function TreatmentTable({ patientId, rows }: TreatmentTableProps) {
       <table className="w-full text-sm">
         <thead className="bg-neutral-50 text-left text-xs uppercase tracking-wide text-neutral-500">
           <tr>
-            <th className="px-4 py-3 font-medium">治療日期</th>
-            <th className="px-4 py-3 font-medium">部位</th>
-            <th className="px-4 py-3 font-medium">品項</th>
-            <th className="px-4 py-3 text-right font-medium">本次注射</th>
-            <th className="px-4 py-3 text-right font-medium">金額</th>
-            <th className="px-4 py-3 font-medium">治療前疼痛</th>
-            <th className="px-4 py-3 font-medium"></th>
+            <th className="px-3 py-3 font-medium sm:px-4">治療日期</th>
+            <th className="px-3 py-3 font-medium sm:px-4">部位</th>
+            <th className="px-3 py-3 font-medium sm:px-4">品項</th>
+            <th className="px-3 py-3 text-right font-medium sm:px-4">本次注射</th>
+            <th className="px-3 py-3 text-right font-medium sm:px-4">金額</th>
+            <th className="hidden px-4 py-3 font-medium sm:table-cell">治療前疼痛</th>
+            <th className="px-3 py-3 font-medium sm:px-4"></th>
           </tr>
         </thead>
         <tbody className="divide-y divide-neutral-100">
@@ -51,10 +51,10 @@ export function TreatmentTable({ patientId, rows }: TreatmentTableProps) {
             const isPackageUse = isPackage && t.quantity === 0;
             return (
               <tr key={t.id} className="hover:bg-neutral-50">
-                <td className="px-4 py-3 text-neutral-700">
+                <td className="px-3 py-3 text-neutral-700 sm:px-4">
                   {formatDateTW(t.treatmentDate)}
                 </td>
-                <td className="px-4 py-3 text-neutral-700">
+                <td className="px-3 py-3 text-neutral-700 sm:px-4">
                   {BODY_PART_LABELS[t.bodyPart]}
                   {t.bodyPartDetail && (
                     <span className="ml-1 text-xs text-neutral-500">
@@ -62,7 +62,7 @@ export function TreatmentTable({ patientId, rows }: TreatmentTableProps) {
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-neutral-700">
+                <td className="px-3 py-3 text-neutral-700 sm:px-4">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span>{t.product.name}</span>
                     {isPackagePurchase && (
@@ -77,14 +77,14 @@ export function TreatmentTable({ patientId, rows }: TreatmentTableProps) {
                     )}
                   </div>
                 </td>
-                <td className="px-4 py-3 text-right font-mono text-neutral-700">
+                <td className="px-3 py-3 text-right font-mono text-neutral-700 sm:px-4">
                   {t.vialsUsed} 瓶
                 </td>
-                <td className="px-4 py-3 text-right font-medium text-neutral-900">
+                <td className="px-3 py-3 text-right font-medium text-neutral-900 sm:px-4">
                   {t.totalAmount > 0 ? formatTWD(t.totalAmount) : "—"}
                 </td>
-                <td className="px-4 py-3 text-neutral-700">{t.painBefore} / 10</td>
-                <td className="px-4 py-3 text-right">
+                <td className="hidden px-4 py-3 text-neutral-700 sm:table-cell">{t.painBefore} / 10</td>
+                <td className="px-3 py-3 text-right sm:px-4">
                   <Link
                     href={`/patients/${patientId}/treatments/${t.id}`}
                     className="text-sm font-medium text-neutral-900 underline-offset-4 hover:underline"

@@ -63,7 +63,7 @@ export function AppointmentForm({
   const errorMessage = state && state.ok === false ? state.error : null;
 
   const selectClass =
-    "flex h-10 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-neutral-50";
+    "flex h-11 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-base sm:h-10 sm:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-neutral-50";
 
   const effectivePatientId = lockedPatientId ?? defaults?.patientId ?? "";
   const lockedPatient =
@@ -129,7 +129,7 @@ export function AppointmentForm({
             {APPOINTMENT_SESSION_OPTIONS.map((opt) => (
               <label
                 key={opt.value}
-                className="group flex cursor-pointer flex-col items-center rounded-md border border-neutral-200 bg-white px-3 py-2 text-center transition-colors has-[:checked]:border-[#1D697C] has-[:checked]:bg-[#1D697C]/10 has-[:checked]:text-[#1D697C]"
+                className="group flex min-h-[52px] cursor-pointer flex-col items-center justify-center rounded-md border border-neutral-200 bg-white px-2 py-2 text-center transition-colors has-[:checked]:border-[#1D697C] has-[:checked]:bg-[#1D697C]/10 has-[:checked]:text-[#1D697C]"
               >
                 <input
                   type="radio"

@@ -5,6 +5,7 @@ import type { Role } from "@prisma/client";
 
 import { cn } from "@/lib/utils";
 import { Header } from "./header";
+import { MobileNav } from "./mobile-nav";
 import { Sidebar } from "./sidebar";
 
 interface AppShellProps {
@@ -44,8 +45,10 @@ export function AppShell({ userName, role, children }: AppShellProps) {
           </div>
         )}
 
-        <main className={cn("flex-1 p-6")}>{children}</main>
+        <main className={cn("flex-1 p-4 pb-24 sm:p-6 md:pb-6")}>{children}</main>
       </div>
+
+      <MobileNav onOpenMenu={() => setSidebarOpen(true)} />
     </div>
   );
 }

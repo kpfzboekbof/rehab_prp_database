@@ -38,22 +38,24 @@ export default async function PatientsPage({ searchParams }: PatientsPageProps) 
         )}
       </div>
 
-      <form action="/patients" method="get" className="flex gap-2">
+      <form action="/patients" method="get" className="flex flex-col gap-2 sm:flex-row">
         <Input
           type="search"
           name="q"
           defaultValue={q}
           placeholder="搜尋姓名、病歷號或電話"
-          className="max-w-sm"
+          className="w-full sm:max-w-sm"
         />
-        <Button type="submit" variant="outline">
-          搜尋
-        </Button>
-        {q && (
-          <Button asChild type="button" variant="ghost">
-            <Link href="/patients">清除</Link>
+        <div className="flex gap-2">
+          <Button type="submit" variant="outline" className="flex-1 sm:flex-none">
+            搜尋
           </Button>
-        )}
+          {q && (
+            <Button asChild type="button" variant="ghost" className="flex-1 sm:flex-none">
+              <Link href="/patients">清除</Link>
+            </Button>
+          )}
+        </div>
       </form>
 
       <PatientTable rows={rows} />

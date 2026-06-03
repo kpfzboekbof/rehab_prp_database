@@ -86,7 +86,7 @@ export function PatientForm({
             name="gender"
             required
             defaultValue={defaults?.gender ?? ""}
-            className="flex h-10 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 focus-visible:ring-offset-2"
+            className="flex h-11 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-base sm:h-10 sm:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 focus-visible:ring-offset-2"
           >
             <option value="" disabled>
               請選擇

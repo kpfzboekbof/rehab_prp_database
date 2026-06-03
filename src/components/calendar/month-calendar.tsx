@@ -156,7 +156,7 @@ export function MonthCalendar({
                 query: { year, month, day: cell.key },
               }}
               className={cn(
-                "group min-h-[96px] border-b border-r border-neutral-200 p-1.5 transition-colors",
+                "group min-h-[64px] border-b border-r border-neutral-200 p-1 transition-colors sm:min-h-[96px] sm:p-1.5",
                 rowLast && "border-b-0",
                 (i + 1) % 7 === 0 && "border-r-0",
                 cell.inMonth ? "bg-white hover:bg-neutral-50" : "bg-neutral-50/50",

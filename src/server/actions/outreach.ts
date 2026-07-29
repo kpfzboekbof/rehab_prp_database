@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import type { OutreachReason } from "@prisma/client";
 
 import { db } from "@/lib/db";
@@ -39,6 +39,12 @@ export async function markOutreachContacted(
   revalidatePath("/outreach/package-finished");
   revalidatePath("/outreach/no-show");
   revalidatePath("/dashboard");
+  revalidatePath("/analytics");
+  // `revalidatePath` does NOT bust `unstable_cache`. Without this the
+  // dashboard / analytics "待聯絡" card keeps serving the pre-contact count
+  // for up to 5 minutes. `updateTag` is the Next 16 server-action primitive
+  // for read-your-own-writes (see AGENTS.md).
+  updateTag("outreach-counts");
 }
 
 /**
@@ -65,4 +71,10 @@ export async function unmarkOutreachContacted(contactId: string): Promise<void> 
   revalidatePath("/outreach/package-finished");
   revalidatePath("/outreach/no-show");
   revalidatePath("/dashboard");
+  revalidatePath("/analytics");
+  // `revalidatePath` does NOT bust `unstable_cache`. Without this the
+  // dashboard / analytics "待聯絡" card keeps serving the pre-contact count
+  // for up to 5 minutes. `updateTag` is the Next 16 server-action primitive
+  // for read-your-own-writes (see AGENTS.md).
+  updateTag("outreach-counts");
 }

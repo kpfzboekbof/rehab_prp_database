@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { Role } from "@prisma/client";
 
@@ -11,8 +12,24 @@ import { auth } from "@/auth";
  * privileged read MUST call one of these helpers at its top.
  */
 
+/**
+ * Request-scoped memo of `auth()`.
+ *
+ * Every authed request calls `requireSession()` at least twice — once in
+ * `src/app/(app)/layout.tsx` to build the shell, then again in the page
+ * itself (and a third time in any server action the page invokes). Each
+ * call re-reads the cookie and re-decrypts + re-verifies the Auth.js JWE,
+ * which is pure CPU we pay for on every navigation.
+ *
+ * React's `cache()` dedupes within a single request render pass, so the
+ * JWT is decrypted once no matter how many layers ask for it. This does
+ * NOT weaken the security boundary: the memo lives and dies with one
+ * request, so a different user's request never observes another's session.
+ */
+const getSession = cache(async () => auth());
+
 export async function requireSession() {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) {
     redirect("/login");
   }
@@ -31,6 +48,6 @@ export async function requireRole(roles: Role[]) {
 }
 
 export async function getCurrentUser() {
-  const session = await auth();
+  const session = await getSession();
   return session?.user ?? null;
 }

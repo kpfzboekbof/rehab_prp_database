@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import type { Role } from "@prisma/client";
 
@@ -8,10 +9,9 @@ import {
 } from "@/components/layout/nav-items";
 import { CLINIC_NAME } from "@/lib/clinic";
 import { formatTWD } from "@/lib/currency";
-import { db } from "@/lib/db";
 import { formatDateTW, taipeiDayStart } from "@/lib/date";
+import { getDashboardStats } from "@/server/queries/dashboard";
 import { countOutreachLists } from "@/server/queries/outreach";
-import { countDueRemindersToday } from "@/server/queries/reminders";
 import { requireSession } from "@/server/rbac";
 
 /**
@@ -67,7 +67,47 @@ type Stat =
   | { kind: "number"; value: number; unit: string }
   | { kind: "currency"; value: number; unit: string }
   | { kind: "text"; text: string }
-  | { kind: "placeholder" };
+  | { kind: "placeholder" }
+  /** Rendered inside its own Suspense boundary — see `OutreachStat`. */
+  | { kind: "deferred" };
+
+/**
+ * The outreach counts are the one dashboard number that cannot be folded
+ * into the single stats query: they are three full-table aggregations
+ * behind a 5-minute `unstable_cache`. On a cache miss they can take
+ * ~500ms+, which used to hold the *entire* dashboard hostage because it
+ * was just another entry in the page-level `Promise.all`.
+ *
+ * Streaming it in its own boundary means the other eight cards paint as
+ * soon as the single stats query returns; this one fills in a beat later.
+ */
+async function OutreachStat({ accent }: { accent: string }) {
+  const counts = await countOutreachLists();
+  const total = counts.dormant + counts.packageFinished + counts.noShow;
+
+  if (total === 0) {
+    return (
+      <div className={`text-lg font-light leading-tight ${accent}`}>
+        目前沒有待聯絡名單
+      </div>
+    );
+  }
+  return (
+    <div>
+      <div className={`text-4xl font-light leading-none ${accent}`}>{total}</div>
+      <div className="mt-2 text-xs text-neutral-500">位病人待聯絡</div>
+    </div>
+  );
+}
+
+function OutreachStatSkeleton() {
+  return (
+    <div>
+      <div className="h-9 w-16 animate-pulse rounded bg-neutral-200" />
+      <div className="mt-2 h-3 w-24 animate-pulse rounded bg-neutral-100" />
+    </div>
+  );
+}
 
 export default async function DashboardPage() {
   const session = await requireSession();
@@ -96,40 +136,24 @@ export default async function DashboardPage() {
   // DOCTOR-scoped vs ADMIN-sees-all for the monthly revenue card.
   const isDoctor = role === "DOCTOR";
 
-  const [
+  // ONE round-trip for all nine scalars (see src/server/queries/dashboard.ts).
+  // The outreach counts are deliberately NOT awaited here — they stream in
+  // separately via <OutreachStat/> so their cache misses can't stall the page.
+  const {
     patientCount,
     upcomingAppointmentCount,
     dueReminderCount,
     activeUserCount,
     activeProductCount,
     doctorsWithCommissionCount,
-    monthRevenueAgg,
+    monthRevenue,
+    monthCommission,
     totalTreatmentRecords,
-    outreachCounts,
-  ] = await Promise.all([
-    db.patient.count({ where: { deletedAt: null } }),
-    db.followUpAppointment.count({
-      where: {
-        scheduledAt: { gte: new Date() },
-        status: { notIn: ["CANCELLED"] },
-      },
-    }),
-    countDueRemindersToday(),
-    db.user.count({ where: { active: true } }),
-    db.pRPProduct.count({ where: { active: true } }),
-    db.doctorCommissionRate.count({ where: { effectiveTo: null } }),
-    db.treatmentRecord.aggregate({
-      where: {
-        treatmentDate: { gte: monthStart, lt: nextMonthStart },
-        ...(isDoctor ? { doctorId: session.user.id } : {}),
-      },
-      _sum: { totalAmount: true, commissionAmount: true },
-    }),
-    db.treatmentRecord.count(),
-    countOutreachLists(),
-  ]);
-  const monthRevenue = monthRevenueAgg._sum.totalAmount ?? 0;
-  const monthCommission = monthRevenueAgg._sum.commissionAmount ?? 0;
+  } = await getDashboardStats({
+    monthStart,
+    nextMonthStart,
+    doctorId: isDoctor ? session.user.id : undefined,
+  });
 
   function statForHref(href: string): Stat {
     switch (href) {
@@ -143,19 +167,9 @@ export default async function DashboardPage() {
         return dueReminderCount > 0
           ? { kind: "number", value: dueReminderCount, unit: "位今日待電訪" }
           : { kind: "text", text: "今日無須電訪" };
-      case "/analytics": {
-        const totalOutreach =
-          outreachCounts.dormant +
-          outreachCounts.packageFinished +
-          outreachCounts.noShow;
-        return totalOutreach > 0
-          ? {
-              kind: "number",
-              value: totalOutreach,
-              unit: "位病人待聯絡",
-            }
-          : { kind: "text", text: "目前沒有待聯絡名單" };
-      }
+      case "/analytics":
+        // Streamed — the counts are three full aggregations behind a cache.
+        return { kind: "deferred" };
       case "/admin/users":
         return { kind: "number", value: activeUserCount, unit: "位啟用使用者" };
       case "/admin/products":
@@ -274,6 +288,11 @@ export default async function DashboardPage() {
                               {stat.text}
                             </div>
                           </div>
+                        )}
+                        {stat.kind === "deferred" && (
+                          <Suspense fallback={<OutreachStatSkeleton />}>
+                            <OutreachStat accent={style.accent} />
+                          </Suspense>
                         )}
                         {isPlaceholder && (
                           <div>

@@ -78,11 +78,14 @@ export default async function ResearchPage({ searchParams }: ResearchPageProps) 
   const raw = await searchParams;
   const { filters, hasAny } = normaliseFilters(raw);
 
-  const products = await listActiveProducts();
-
-  const result = hasAny
-    ? await searchResearch(filters)
-    : { rows: [], truncated: false, total: 0 };
+  // These two are independent — awaiting them in sequence added a whole
+  // Neon round-trip (~100ms) to every filter change for no reason.
+  const [products, result] = await Promise.all([
+    listActiveProducts(),
+    hasAny
+      ? searchResearch(filters)
+      : Promise.resolve({ rows: [], truncated: false, total: 0 }),
+  ]);
 
   // Build the CSV URL preserving all current filter values.
   const csvParams = new URLSearchParams();

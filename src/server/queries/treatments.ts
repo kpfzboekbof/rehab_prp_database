@@ -4,6 +4,9 @@ export async function listTreatmentsByPatient(patientId: string) {
   return db.treatmentRecord.findMany({
     where: { patientId },
     orderBy: { treatmentDate: "desc" },
+    // LATERAL JOIN the two relations into the same statement instead of
+    // letting Prisma issue a follow-up query for each.
+    relationLoadStrategy: "join",
     include: {
       // Include unitPrice on the product so the patient detail page can
       // compute package balances from this same query result, instead of
@@ -74,6 +77,8 @@ export function computePackageBalancesFromTreatments(
 export async function getTreatment(id: string) {
   return db.treatmentRecord.findUnique({
     where: { id },
+    // Three relations = three extra round-trips without this.
+    relationLoadStrategy: "join",
     include: {
       product: {
         select: {

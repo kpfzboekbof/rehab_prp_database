@@ -261,7 +261,7 @@ export interface TopPatientRow {
   lastTreatmentDate: Date;
 }
 
-export async function getRetentionStats(): Promise<RetentionStats> {
+async function computeRetentionStats(): Promise<RetentionStats> {
   // Pull all charging treatments (not the "use visit" rows which have
   // totalAmount = 0). We need per-patient counts + first/last dates.
   const charging = await db.treatmentRecord.findMany({
@@ -400,6 +400,58 @@ export async function getRetentionStats(): Promise<RetentionStats> {
   };
 }
 
+/**
+ * Cached retention stats.
+ *
+ * `computeRetentionStats` scans every charging TreatmentRecord in the
+ * database and reduces it in JS — cheap in round-trips (2) but expensive
+ * in bytes and CPU, and it was recomputed on *every* page view. The
+ * underlying data only changes when a treatment is recorded, so a
+ * 10-minute TTL is generous.
+ *
+ * `unstable_cache` JSON-serializes its payload, which would silently turn
+ * `topPatients[].firstTreatmentDate` into a string while TypeScript still
+ * claims it is a `Date`. So the cache stores an explicitly ISO-stringified
+ * shape and we revive the Dates on the way out — the public signature
+ * still returns real `Date` objects.
+ */
+type RetentionStatsCached = Omit<RetentionStats, "topPatients"> & {
+  topPatients: Array<
+    Omit<TopPatientRow, "firstTreatmentDate" | "lastTreatmentDate"> & {
+      firstTreatmentDate: string;
+      lastTreatmentDate: string;
+    }
+  >;
+};
+
+const getRetentionStatsCached = unstable_cache(
+  async (): Promise<RetentionStatsCached> => {
+    const stats = await computeRetentionStats();
+    return {
+      ...stats,
+      topPatients: stats.topPatients.map((p) => ({
+        ...p,
+        firstTreatmentDate: p.firstTreatmentDate.toISOString(),
+        lastTreatmentDate: p.lastTreatmentDate.toISOString(),
+      })),
+    };
+  },
+  ["retention-stats-v1"],
+  { revalidate: 600, tags: ["treatments"] },
+);
+
+export async function getRetentionStats(): Promise<RetentionStats> {
+  const cached = await getRetentionStatsCached();
+  return {
+    ...cached,
+    topPatients: cached.topPatients.map((p) => ({
+      ...p,
+      firstTreatmentDate: new Date(p.firstTreatmentDate),
+      lastTreatmentDate: new Date(p.lastTreatmentDate),
+    })),
+  };
+}
+
 // ---------------------------------------------------------------
 // #9 — Session utilisation
 // ---------------------------------------------------------------
@@ -424,7 +476,7 @@ export interface SessionUtilisationParams {
   monthsBack: number; // e.g. 3 for a rolling 3-month window
 }
 
-export async function getSessionUtilisation({
+async function computeSessionUtilisation({
   monthsBack,
 }: SessionUtilisationParams): Promise<SessionUtilisationStats> {
   const rangeEnd = new Date();
@@ -495,6 +547,43 @@ export async function getSessionUtilisation({
   };
 }
 
+/**
+ * Cached session utilisation. Same Date-revival dance as the retention
+ * stats above: `rangeStart` / `rangeEnd` would come back as strings.
+ *
+ * The window is "the last N months from now", so the cached value drifts
+ * by at most the TTL — acceptable for a heatmap whose whole point is
+ * showing multi-month shape.
+ */
+type SessionUtilisationCached = Omit<
+  SessionUtilisationStats,
+  "rangeStart" | "rangeEnd"
+> & { rangeStart: string; rangeEnd: string };
+
+const getSessionUtilisationCached = unstable_cache(
+  async (params: SessionUtilisationParams): Promise<SessionUtilisationCached> => {
+    const stats = await computeSessionUtilisation(params);
+    return {
+      ...stats,
+      rangeStart: stats.rangeStart.toISOString(),
+      rangeEnd: stats.rangeEnd.toISOString(),
+    };
+  },
+  ["session-utilisation-v1"],
+  { revalidate: 600, tags: ["appointments"] },
+);
+
+export async function getSessionUtilisation(
+  params: SessionUtilisationParams,
+): Promise<SessionUtilisationStats> {
+  const cached = await getSessionUtilisationCached(params);
+  return {
+    ...cached,
+    rangeStart: new Date(cached.rangeStart),
+    rangeEnd: new Date(cached.rangeEnd),
+  };
+}
+
 // ---------------------------------------------------------------
 // #10 — New patient funnel
 // ---------------------------------------------------------------
@@ -522,7 +611,7 @@ export interface NewPatientFunnelStats {
   medianDaysToSecond: number | null;
 }
 
-export async function getNewPatientFunnel({
+async function computeNewPatientFunnel({
   monthsBack,
 }: {
   monthsBack: number;
@@ -644,3 +733,17 @@ export async function getNewPatientFunnel({
     medianDaysToSecond,
   };
 }
+
+/**
+ * Cached new-patient funnel.
+ *
+ * No Date-revival needed here — `NewPatientFunnelStats` is entirely
+ * numbers and "YYYY-MM" strings, so it survives `unstable_cache`'s JSON
+ * round-trip unchanged. Keyed by the params object, so each `?months=`
+ * choice caches independently.
+ */
+export const getNewPatientFunnel = unstable_cache(
+  computeNewPatientFunnel,
+  ["new-patient-funnel-v1"],
+  { revalidate: 600, tags: ["treatments"] },
+);

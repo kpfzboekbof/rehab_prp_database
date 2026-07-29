@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 export async function listProducts() {
   return db.pRPProduct.findMany({
     orderBy: [{ active: "desc" }, { name: "asc" }],
+    relationLoadStrategy: "join",
     include: {
       _count: { select: { treatments: true } },
     },
@@ -29,6 +30,7 @@ export async function listActiveProducts() {
 export async function getProduct(id: string) {
   return db.pRPProduct.findUnique({
     where: { id },
+    relationLoadStrategy: "join",
     include: { _count: { select: { treatments: true } } },
   });
 }

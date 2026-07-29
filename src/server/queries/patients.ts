@@ -70,6 +70,7 @@ export async function listPatients({
 export async function getPatient(id: string) {
   return db.patient.findFirst({
     where: { id, deletedAt: null },
+    relationLoadStrategy: "join",
     include: {
       createdBy: { select: { id: true, name: true } },
     },

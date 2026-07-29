@@ -90,6 +90,10 @@ export async function listDueRemindersForCallDay(callDayKey: string) {
       followUpCall: { is: null },
     },
     orderBy: { scheduledAt: "asc" },
+    // One statement with LATERAL JOINs instead of a follow-up query per
+    // relation. `reminderInclude` pulls patient + sourceTreatment.product +
+    // followUpCall.calledBy, which cost four extra round-trips each way.
+    relationLoadStrategy: "join",
     include: reminderInclude,
   });
 }
@@ -110,6 +114,7 @@ export async function listCompletedRemindersForCallDay(callDayKey: string) {
       followUpCall: { isNot: null },
     },
     orderBy: { scheduledAt: "asc" },
+    relationLoadStrategy: "join",
     include: reminderInclude,
   });
 }
@@ -178,6 +183,7 @@ export async function getBusyCallDaysInMonth(
 export async function getAppointmentForCall(appointmentId: string) {
   return db.followUpAppointment.findUnique({
     where: { id: appointmentId },
+    relationLoadStrategy: "join",
     include: reminderInclude,
   });
 }

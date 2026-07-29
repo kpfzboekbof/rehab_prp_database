@@ -129,6 +129,9 @@ export async function searchResearch(
       where,
       orderBy: { treatmentDate: "desc" },
       take: RESEARCH_ROW_CAP + 1, // +1 so we can detect truncation
+      // Up to 500 rows x 3 relations — without the join strategy Prisma
+      // issues three extra round-trips with big IN (...) lists.
+      relationLoadStrategy: "join",
       include: {
         product: { select: { id: true, name: true, packageSize: true } },
         patient: {

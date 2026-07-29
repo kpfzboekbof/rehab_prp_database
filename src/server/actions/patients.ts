@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { Prisma } from "@prisma/client";
 
@@ -134,5 +134,8 @@ export async function softDeletePatient(id: string): Promise<void> {
 
   revalidatePath("/patients");
   revalidatePath("/dashboard");
+  // A soft-deleted patient must drop off the outreach action lists.
+  updateTag("outreach-counts");
+  updateTag("treatments");
   redirect("/patients");
 }

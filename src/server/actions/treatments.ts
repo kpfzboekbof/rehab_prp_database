@@ -253,6 +253,11 @@ export async function createTreatment(
   // primitive for "read-your-own-writes" cache invalidation.
   updateTag("monthly-report");
   updateTag("monthly-trend");
+  // Retention + funnel insights aggregate over every charging treatment.
+  updateTag("treatments");
+  // A new/edited treatment changes who counts as "dormant" or as having
+  // finished a package.
+  updateTag("outreach-counts");
   redirect(`/patients/${patientId}/treatments/${createdId}`);
 }
 
@@ -350,5 +355,10 @@ export async function updateTreatment(
   // Bust report aggregates so edits to amounts/dates show up immediately.
   updateTag("monthly-report");
   updateTag("monthly-trend");
+  // Retention + funnel insights aggregate over every charging treatment.
+  updateTag("treatments");
+  // A new/edited treatment changes who counts as "dormant" or as having
+  // finished a package.
+  updateTag("outreach-counts");
   redirect(`/patients/${patientId}/treatments/${treatmentId}`);
 }

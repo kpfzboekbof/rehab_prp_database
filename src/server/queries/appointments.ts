@@ -40,6 +40,7 @@ export async function listAppointmentsForMonth(year: number, month: number) {
       scheduledAt: { gte: start, lt: end },
     },
     orderBy: appointmentOrder,
+    relationLoadStrategy: "join",
     include: appointmentInclude,
   });
 }
@@ -56,6 +57,7 @@ export async function listAppointmentsForDay(yyyyMmDd: string) {
       },
     },
     orderBy: appointmentOrder,
+    relationLoadStrategy: "join",
     include: appointmentInclude,
   });
 }
@@ -63,6 +65,7 @@ export async function listAppointmentsForDay(yyyyMmDd: string) {
 export async function getAppointment(id: string) {
   return db.followUpAppointment.findUnique({
     where: { id },
+    relationLoadStrategy: "join",
     include: appointmentInclude,
   });
 }
@@ -92,6 +95,7 @@ export async function listUpcomingForPatient(patientId: string, limit = 20) {
     },
     orderBy: appointmentOrder,
     take: limit,
+    relationLoadStrategy: "join",
     include: appointmentInclude,
   });
 }
@@ -120,6 +124,7 @@ export async function listPastForPatient(patientId: string, limit = 20) {
     },
     orderBy: [{ scheduledAt: "desc" }, { session: "desc" }],
     take: limit,
+    relationLoadStrategy: "join",
     include: appointmentInclude,
   });
 }

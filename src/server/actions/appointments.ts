@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { AppointmentStatus } from "@prisma/client";
 
@@ -82,6 +82,10 @@ export async function createAppointment(
 
   revalidatePath("/calendar");
   revalidatePath(`/patients/${data.patientId}`);
+  // Session-utilisation heatmap + the "no upcoming appointment" predicate
+  // behind the outreach lists both key off appointments.
+  updateTag("appointments");
+  updateTag("outreach-counts");
   redirect(`/calendar?day=${taipeiDateKey(scheduledAtUTC)}`);
 }
 
@@ -140,6 +144,10 @@ export async function updateAppointment(
 
   revalidatePath("/calendar");
   revalidatePath(`/patients/${data.patientId}`);
+  // Session-utilisation heatmap + the "no upcoming appointment" predicate
+  // behind the outreach lists both key off appointments.
+  updateTag("appointments");
+  updateTag("outreach-counts");
   redirect(`/calendar?day=${taipeiDateKey(scheduledAtUTC)}`);
 }
 
@@ -173,6 +181,8 @@ export async function updateAppointmentStatus(
 
   revalidatePath("/calendar");
   revalidatePath(`/patients/${existing.patientId}`);
+  updateTag("appointments");
+  updateTag("outreach-counts");
   return { ok: true };
 }
 
@@ -210,5 +220,7 @@ export async function deleteAppointment(id: string): Promise<ActionState> {
   revalidatePath("/calendar");
   revalidatePath(`/patients/${existing.patientId}`);
   revalidatePath("/reminders");
+  updateTag("appointments");
+  updateTag("outreach-counts");
   redirect(`/calendar?day=${taipeiDateKey(existing.scheduledAt)}`);
 }

@@ -13,6 +13,12 @@
 
 generator client {
   provider = "prisma-client-js"
+  // `relationJoins` unlocks `relationLoadStrategy: "join"`, which resolves
+  // nested `include`s with LATERAL JOINs in ONE statement instead of issuing
+  // a follow-up query per relation. Without it, /reminders' three findMany
+  // calls fanned out into 8 statements. Opt-in per query — the default stays
+  // Prisma's usual "query" strategy, so nothing changes unless asked.
+  previewFeatures = ["relationJoins"]
 }
 
 datasource db {
@@ -166,7 +172,10 @@ model Patient {
   outreachContacts OutreachContact[]
 
   @@index([name])
-  @@index([deletedAt])
+  // `listPatients` is WHERE "deletedAt" IS NULL ORDER BY "createdAt" DESC
+  // LIMIT 20. The composite lets Postgres walk the index in order and stop
+  // after 20 rows instead of filtering on deletedAt then sorting everything.
+  @@index([deletedAt, createdAt])
 }
 
 model PRPProduct {
@@ -226,8 +235,16 @@ model TreatmentRecord {
 
   appointments FollowUpAppointment[]
 
-  @@index([patientId])
-  @@index([doctorId])
+  // Composites, not bare columns: every hot query on this table filters by
+  // patient or doctor AND then orders/aggregates by treatmentDate.
+  //   - listTreatmentsByPatient:  WHERE patientId ORDER BY treatmentDate DESC
+  //   - outreach dormant CTE:     GROUP BY patientId HAVING MAX(treatmentDate)
+  //   - the "most recent treatment" LATERAL on the dormant list
+  //   - doctor-scoped monthly report / trend: WHERE doctorId AND date range
+  // A composite covers single-column lookups on its leading column too, so
+  // the old bare [patientId] / [doctorId] indexes are redundant and dropped.
+  @@index([patientId, treatmentDate])
+  @@index([doctorId, treatmentDate])
   @@index([treatmentDate])
   @@index([bodyPart])
 }
@@ -250,8 +267,14 @@ model FollowUpAppointment {
   followUpCall FollowUpCall?
 
   @@index([scheduledAt])
-  @@index([patientId])
-  @@index([status])
+  // Serves the `NOT EXISTS (... patientId = ? AND scheduledAt >= now ...)`
+  // guard that all three outreach lists use, and the DISTINCT ON
+  // (patientId) ORDER BY scheduledAt DESC in listNoShowPatients.
+  // Supersedes the old bare [patientId].
+  @@index([patientId, scheduledAt])
+  // listNoShowPatients: WHERE status IN ('NO_SHOW','CANCELLED')
+  // AND scheduledAt < now. Supersedes the old bare [status].
+  @@index([status, scheduledAt])
 }
 
 model FollowUpCall {

@@ -172,9 +172,16 @@ model Patient {
   outreachContacts OutreachContact[]
 
   @@index([name])
-  // `listPatients` is WHERE "deletedAt" IS NULL ORDER BY "createdAt" DESC
-  // LIMIT 20. The composite lets Postgres walk the index in order and stop
-  // after 20 rows instead of filtering on deletedAt then sorting everything.
+  // Widened from a bare [deletedAt] to also carry createdAt (the sort key of
+  // `listPatients`). MEASURED CAVEAT: this does not actually change the plan.
+  // `deletedAt IS NULL` matches ~98% of rows, so Postgres correctly prefers a
+  // seq scan + top-N sort over an index scan at any table size we tested
+  // (3k and 50k rows) — even with enable_seqscan=off it picks a bitmap scan,
+  // which loses the ordering anyway. Kept because it strictly supersedes the
+  // [deletedAt] index it replaced (same leading column, one extra column of
+  // write cost), not because it earns its keep. If patient search ever needs
+  // to be fast, the answer is a pg_trgm GIN index on name/chartNumber/phone,
+  // not this.
   @@index([deletedAt, createdAt])
 }
 
